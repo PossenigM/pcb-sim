@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pcb-sim/schema/ic-manifest.schema.json",
+  "title": "IC manifest",
+  "description": "Describes a reusable component in the IC library.",
+  "type": "object",
+  "required": ["id", "version", "kind", "pins", "interfaces"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+/[a-z0-9_]+$",
+      "description": "Unique IC identifier in vendor/part form."
+    },
+    "version": {
+      "type": "string",
+      "description": "Manifest version (semver-ish)."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["firmware_host", "sensor", "actuator", "io_expander", "logic", "other"]
+    },
+    "description": { "type": "string" },
+    "interfaces": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/interface" }
+    },
+    "pins": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/pin" }
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/configField" }
+    },
+    "mqtt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "publish":   { "type": "array", "items": { "$ref": "#/$defs/mqttChannel" } },
+        "subscribe": { "type": "array", "items": { "$ref": "#/$defs/mqttChannel" } }
+      }
+    },
+    "behavior": {
+      "type": "string",
+      "pattern": "^builtin:[a-z0-9_]+$",
+      "description": "Required for all kinds except firmware_host."
+    }
+  },
+  "allOf": [
+    {
+      "if":   { "properties": { "kind": { "const": "firmware_host" } } },
+      "then": { "not": { "required": ["behavior"] } },
+      "else": { "required": ["behavior"] }
+    }
+  ],
+  "$defs": {
+    "interface": {
+      "type": "object",
+      "required": ["name", "protocol", "pins"],
+      "additionalProperties": false,
+      "properties": {
+        "name":     { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "protocol": { "type": "string", "enum": ["i2c", "spi", "uart", "gpio"] },
+        "role":     { "type": "string", "enum": ["master", "slave", "peer"] },
+        "pins":     { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "config": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/configField" }
+        }
+      }
+    },
+    "pin": {
+      "type": "object",
+      "required": ["name", "dir"],
+      "additionalProperties": false,
+      "properties": {
+        "name":    { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
+        "dir":     { "type": "string", "enum": ["in", "out", "bidir"] },
+        "default": { "type": "string", "enum": ["LOW", "HIGH", "Z"] },
+        "runtime_configurable": { "type": "boolean" }
+      }
+    },
+    "configField": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type":    { "type": "string", "enum": ["int", "float", "string", "bool", "hex", "enum"] },
+        "default": {},
+        "choices": { "type": "array" },
+        "range":   { "type": "array", "minItems": 2, "maxItems": 2 },
+        "unit":    { "type": "string" }
+      }
+    },
+    "mqttChannel": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "type": { "type": "string", "enum": ["bool", "int", "float", "string", "bytes"] },
+        "unit": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+id: generic/gpio_led
+version: "0.1"
+kind: actuator
+description: A single LED driven by a GPIO pin. Publishes its on/off state
+  to MQTT whenever the driving pin changes.
+
+interfaces:
+  - name: gpio
+    protocol: gpio
+    pins: [A]
+
+pins:
+  - { name: A, dir: in, default: Z }
+
+mqtt:
+  publish:
+    - { name: state, type: bool }
+
+behavior: builtin:gpio_led

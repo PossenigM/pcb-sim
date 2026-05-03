@@ -1,0 +1,22 @@
+[package]
+name = "sim-bin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "sim-bin"
+path = "src/main.rs"
+
+[dependencies]
+sim-core      = { workspace = true }
+sim-config    = { workspace = true }
+sim-behaviors = { workspace = true }
+sim-mqtt      = { workspace = true }
+sim-ipc       = { workspace = true }
+sim-protocol  = { workspace = true }
+tokio         = { workspace = true }
+clap          = { workspace = true }
+tracing       = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow        = { workspace = true }

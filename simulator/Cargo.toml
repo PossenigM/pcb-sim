@@ -1,0 +1,51 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/sim-core",
+    "crates/sim-protocol",
+    "crates/sim-config",
+    "crates/sim-behaviors",
+    "crates/sim-mqtt",
+    "crates/sim-ipc",
+    "crates/sim-bin",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "TBD"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1"
+rmp-serde = "1"
+
+# Schema validation
+jsonschema = "0.18"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Errors
+thiserror = "1"
+anyhow = "1"
+
+# MQTT
+rumqttc = "0.24"
+
+# Internal crates
+sim-core      = { path = "crates/sim-core" }
+sim-protocol  = { path = "crates/sim-protocol" }
+sim-config    = { path = "crates/sim-config" }
+sim-behaviors = { path = "crates/sim-behaviors" }
+sim-mqtt      = { path = "crates/sim-mqtt" }
+sim-ipc       = { path = "crates/sim-ipc" }

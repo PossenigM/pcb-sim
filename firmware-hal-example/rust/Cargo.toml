@@ -1,0 +1,15 @@
+[package]
+name = "pcb_sim-hal"
+version = "0.1.0"
+edition = "2021"
+description = "Reference Rust HAL for pcb-sim."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+rmp-serde = "1"
+serde_bytes = "0.11"
+thiserror = "1"
+
+[lib]
+name = "pcb_sim_hal"
+path = "src/lib.rs"

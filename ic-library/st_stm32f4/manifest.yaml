@@ -1,0 +1,46 @@
+id: st/stm32f4
+version: "0.1"
+kind: firmware_host
+description: ST STM32F4 microcontroller (firmware boundary). No behavior;
+  the simulator wires an IPC adapter to its declared interfaces and pins.
+
+interfaces:
+  - name: i2c1
+    protocol: i2c
+    role: master
+    pins: [I2C1_SCL, I2C1_SDA]
+
+  - name: spi1
+    protocol: spi
+    role: master
+    pins: [SPI1_SCK, SPI1_MOSI, SPI1_MISO, SPI1_NSS]
+
+  - name: uart2
+    protocol: uart
+    role: peer
+    pins: [USART2_TX, USART2_RX]
+
+  - name: gpio
+    protocol: gpio
+    pins: [PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7]
+
+pins:
+  - { name: I2C1_SCL,  dir: bidir, default: Z }
+  - { name: I2C1_SDA,  dir: bidir, default: Z }
+  - { name: SPI1_SCK,  dir: out,   default: LOW }
+  - { name: SPI1_MOSI, dir: out,   default: LOW }
+  - { name: SPI1_MISO, dir: in,    default: Z }
+  - { name: SPI1_NSS,  dir: out,   default: HIGH }
+  - { name: USART2_TX, dir: out,   default: HIGH }
+  - { name: USART2_RX, dir: in,    default: Z }
+  - { name: PA0, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: PA1, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: PA2, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: PA3, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: PA4, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: PA5, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: PA6, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: PA7, dir: bidir, default: Z, runtime_configurable: true }
+
+# firmware_host has no behavior field. The simulator instantiates an IPC
+# adapter for this component using its `firmware:` block in the board YAML.

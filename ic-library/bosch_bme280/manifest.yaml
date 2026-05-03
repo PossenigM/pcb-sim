@@ -1,0 +1,29 @@
+id: bosch/bme280
+version: "0.1"
+kind: sensor
+description: Bosch BME280 temperature/humidity/pressure sensor (I2C variant).
+  Subscribes to physics-engine MQTT topics and serves their values back to
+  firmware over I2C register reads.
+
+interfaces:
+  - name: i2c
+    protocol: i2c
+    role: slave
+    pins: [SCL, SDA]
+    config:
+      address:
+        type: hex
+        default: 0x76
+        choices: [0x76, 0x77]
+
+pins:
+  - { name: SCL, dir: in,    default: Z }
+  - { name: SDA, dir: bidir, default: Z }
+
+mqtt:
+  subscribe:
+    - { name: temperature, type: float, unit: celsius }
+    - { name: humidity,    type: float, unit: percent }
+    - { name: pressure,    type: float, unit: hPa }
+
+behavior: builtin:bme280

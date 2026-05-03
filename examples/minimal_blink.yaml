@@ -1,0 +1,32 @@
+board:
+  name: minimal_blink
+  version: "0.1"
+
+layout:
+  mcu1: { x: 2, y: 2 }
+  led1: { x: 5, y: 2 }
+
+mqtt:
+  broker: tcp://localhost:1883
+  prefix: dev/
+
+components:
+  - id: mcu1
+    type: st/stm32f4@0.1
+    firmware:
+      transport: unix_socket
+      path: /tmp/board_sim/mcu1.sock
+
+  - id: led1
+    type: generic/gpio_led@0.1
+    mqtt:
+      publish:
+        state: actuators/led1/state
+
+buses: []
+
+nets:
+  - id: net_led1
+    endpoints:
+      - { component: mcu1, pin: PA0 }
+      - { component: led1, pin: A }

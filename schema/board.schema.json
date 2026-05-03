@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pcb-sim/schema/board.schema.json",
+  "title": "Board definition",
+  "description": "A specific instantiation of ICs and connections.",
+  "type": "object",
+  "required": ["board", "components", "buses", "nets"],
+  "additionalProperties": false,
+  "properties": {
+    "board": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name":    { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "layout": {
+      "description": "Editor-only metadata; simulator ignores.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["x", "y"],
+        "properties": {
+          "x": { "type": "number" },
+          "y": { "type": "number" }
+        }
+      }
+    },
+    "mqtt": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "broker": { "type": "string" },
+        "prefix": { "type": "string" }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/component" }
+    },
+    "buses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/bus" }
+    },
+    "nets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/net" }
+    }
+  },
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id":   { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "type": { "type": "string", "pattern": "^[a-z0-9_]+/[a-z0-9_]+@[0-9.]+$" },
+        "config": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "initial_values": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "mqtt": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "publish":   { "type": "object", "additionalProperties": { "type": "string" } },
+            "subscribe": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        },
+        "firmware": {
+          "type": "object",
+          "required": ["transport", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "transport": { "const": "unix_socket" },
+            "path":      { "type": "string" }
+          }
+        }
+      }
+    },
+    "bus": {
+      "oneOf": [
+        { "$ref": "#/$defs/i2cBus" },
+        { "$ref": "#/$defs/spiBus" },
+        { "$ref": "#/$defs/uartBus" }
+      ]
+    },
+    "i2cBus": {
+      "type": "object",
+      "required": ["id", "protocol", "members"],
+      "additionalProperties": false,
+      "properties": {
+        "id":       { "type": "string" },
+        "protocol": { "const": "i2c" },
+        "members": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["component", "interface"],
+            "additionalProperties": false,
+            "properties": {
+              "component": { "type": "string" },
+              "interface": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "spiBus": {
+      "type": "object",
+      "required": ["id", "protocol", "master", "slaves"],
+      "additionalProperties": false,
+      "properties": {
+        "id":       { "type": "string" },
+        "protocol": { "const": "spi" },
+        "master": {
+          "type": "object",
+          "required": ["component", "interface"],
+          "additionalProperties": false,
+          "properties": {
+            "component": { "type": "string" },
+            "interface": { "type": "string" }
+          }
+        },
+        "slaves": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["component", "interface", "cs_pin_on_master"],
+            "additionalProperties": false,
+            "properties": {
+              "component":        { "type": "string" },
+              "interface":        { "type": "string" },
+              "cs_pin_on_master": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "uartBus": {
+      "type": "object",
+      "required": ["id", "protocol", "peers"],
+      "additionalProperties": false,
+      "properties": {
+        "id":       { "type": "string" },
+        "protocol": { "const": "uart" },
+        "peers": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["component", "interface"],
+            "additionalProperties": false,
+            "properties": {
+              "component": { "type": "string" },
+              "interface": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "net": {
+      "type": "object",
+      "required": ["id", "endpoints"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "endpoints": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["component", "pin"],
+            "additionalProperties": false,
+            "properties": {
+              "component": { "type": "string" },
+              "pin":       { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

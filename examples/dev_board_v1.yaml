@@ -1,0 +1,72 @@
+board:
+  name: dev_board_v1
+  version: "0.1"
+
+# Editor-only metadata. Simulator ignores.
+layout:
+  mcu1:    { x: 2, y: 2 }
+  ioexp1:  { x: 6, y: 2 }
+  temp1:   { x: 6, y: 5 }
+  led1:    { x: 9, y: 2 }
+  led2:    { x: 9, y: 4 }
+
+mqtt:
+  broker: tcp://localhost:1883
+  prefix: lab1/board1/
+
+components:
+  - id: mcu1
+    type: st/stm32f4@0.1
+    firmware:
+      transport: unix_socket
+      path: /tmp/board_sim/mcu1.sock
+
+  - id: ioexp1
+    type: microchip/mcp23017@0.1
+    config:
+      i2c.address: 0x20
+
+  - id: temp1
+    type: bosch/bme280@0.1
+    config:
+      i2c.address: 0x76
+    initial_values:
+      temperature: 20.0
+      humidity: 50.0
+      pressure: 1013.0
+    mqtt:
+      subscribe:
+        temperature: sensors/room1/temperature
+        humidity:    sensors/room1/humidity
+        pressure:    sensors/room1/pressure
+
+  - id: led1
+    type: generic/gpio_led@0.1
+    mqtt:
+      publish:
+        state: actuators/led1/state
+
+  - id: led2
+    type: generic/gpio_led@0.1
+    mqtt:
+      publish:
+        state: actuators/led2/state
+
+buses:
+  - id: i2c_main
+    protocol: i2c
+    members:
+      - { component: mcu1,   interface: i2c1 }
+      - { component: ioexp1, interface: i2c }
+      - { component: temp1,  interface: i2c }
+
+nets:
+  - id: net_led1
+    endpoints:
+      - { component: ioexp1, pin: GPA0 }
+      - { component: led1,   pin: A }
+
+  - id: net_led2
+    endpoints:
+      - { component: mcu1,  pin: PA0 }
+      - { component: led2,  pin: A }
