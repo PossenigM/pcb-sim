@@ -29,19 +29,17 @@ pub struct IncomingMqtt {
 }
 
 impl MqttAdapter {
-    /// Build the routing tables from a loaded `Board` and library, then
-    /// connect to the broker and subscribe to every topic in
-    /// `subscribe_routes`.
     // TODO: pub async fn new(board: &Board, library: &IcLibrary) -> Result<Self, _>
+    //   Build the routing tables from a loaded Board and library, then
+    //   connect to the broker and subscribe to every topic in subscribe_routes.
 
-    /// Publish a value on the topic mapped from (component, channel).
-    /// No-op with a warning if no mapping exists.
-    // TODO: pub async fn publish(&self, component: ComponentId,
-    //                            channel: &str, value: MqttValue)
+    // TODO: pub async fn publish(&self, component: ComponentId, channel: &str, value: MqttValue)
+    //   Publish a value on the topic mapped from (component, channel).
+    //   No-op with a warning if no mapping exists.
 
-    /// Run the receive loop, decoding payloads and pushing
-    /// `IncomingMqtt` events onto the supplied event loop sender.
     // TODO: pub async fn run(self, sink: EventSender) -> Result<(), _>
+    //   Run the receive loop, decoding payloads and pushing ExternalEvent::MqttMessage
+    //   events onto the supplied event loop sender.
 }
 
 // TODO: payload decoding helpers. MQTT payloads are bytes; we need to
