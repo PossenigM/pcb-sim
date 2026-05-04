@@ -137,15 +137,60 @@ pub enum MqttPayloadType {
 }
 
 impl IcManifest {
-    /// Load an IC manifest from a YAML file. Validates against the JSON
+    /// Load an IC manifest from a YAML file, validating against the JSON
     /// Schema before returning.
-    pub fn load_yaml_file(_path: &std::path::Path) -> Result<Self, crate::validate::ValidationError> {
-        // TODO: read file → parse YAML → validate via schema → deserialize
-        unimplemented!()
+    pub fn load_yaml_file(path: &std::path::Path) -> Result<Self, crate::validate::ValidationError> {
+        let text = std::fs::read_to_string(path).map_err(|e| crate::validate::ValidationError::Io {
+            path: path.display().to_string(),
+            source: e,
+        })?;
+        Self::from_yaml_str(&text)
     }
 
-    pub fn from_yaml_str(_yaml: &str) -> Result<Self, crate::validate::ValidationError> {
-        // TODO: parse → validate → deserialize
-        unimplemented!()
+    /// Parse an IC manifest from a YAML string, validating against the JSON
+    /// Schema before returning.
+    pub fn from_yaml_str(yaml: &str) -> Result<Self, crate::validate::ValidationError> {
+        let value: serde_yaml::Value = serde_yaml::from_str(yaml)?;
+        crate::validate::validate_manifest(&value)?;
+        let manifest: Self = serde_yaml::from_value(value)?;
+        Ok(manifest)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const BME280_YAML: &str =
+        include_str!("../../../../ic-library/bosch_bme280/manifest.yaml");
+    const STM32F4_YAML: &str =
+        include_str!("../../../../ic-library/st_stm32f4/manifest.yaml");
+    const MCP23017_YAML: &str =
+        include_str!("../../../../ic-library/microchip_mcp23017/manifest.yaml");
+
+    #[test]
+    fn bme280_manifest_loads() {
+        let m = IcManifest::from_yaml_str(BME280_YAML).unwrap();
+        assert_eq!(m.id, "bosch/bme280");
+        assert_eq!(m.version, "0.1");
+        assert_eq!(m.kind, IcKind::Sensor);
+        assert!(m.mqtt.is_some());
+        assert_eq!(m.behavior.as_deref(), Some("builtin:bme280"));
+    }
+
+    #[test]
+    fn stm32f4_is_firmware_host() {
+        let m = IcManifest::from_yaml_str(STM32F4_YAML).unwrap();
+        assert_eq!(m.kind, IcKind::FirmwareHost);
+        assert!(m.behavior.is_none());
+        assert!(m.interfaces.iter().any(|i| i.name == "i2c1"));
+    }
+
+    #[test]
+    fn mcp23017_has_i2c_interface_with_address_config() {
+        let m = IcManifest::from_yaml_str(MCP23017_YAML).unwrap();
+        let iface = m.interfaces.iter().find(|i| i.name == "i2c").unwrap();
+        assert_eq!(iface.role, Some(InterfaceRole::Slave));
+        assert!(iface.config.contains_key("address"));
     }
 }
