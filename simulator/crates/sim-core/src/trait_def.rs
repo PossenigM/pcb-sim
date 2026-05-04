@@ -2,7 +2,11 @@
 
 use crate::error::IcError;
 use crate::time::SimTime;
-use crate::types::{BusId, BusResponse, BusTransaction, MqttValue, PinId, PinValue};
+use crate::types::{
+    BusId, BusResponse, BusTransaction, ComponentId, ConfigValue, MqttValue,
+    OwnedBusTransaction, PinId, PinValue,
+};
+use std::collections::HashMap;
 use std::time::Duration;
 
 /// Implemented by every simulated peripheral. `firmware_host` components
@@ -61,60 +65,136 @@ pub trait IcBehavior: Send {
     }
 }
 
-/// Provided to `IcBehavior::init`. Exposes config and pin/bus name
-/// resolution.
-pub struct InitCtx<'a> {
-    // TODO: fill in. Likely contains:
-    //   - a reference to the resolved component config
-    //   - a way to look up PinId by pin name local to this IC
-    //   - a way to look up BusId by interface name local to this IC
-    //   - a way to set initial pin values
-    //   - a way to schedule the first tick
-    _placeholder: std::marker::PhantomData<&'a ()>,
+// ── PendingOutputs ────────────────────────────────────────────────────────────
+
+/// Outputs queued up by a behavior during a single handler call.
+/// The event loop drains this after every `IcBehavior` method returns.
+#[derive(Default)]
+pub struct PendingOutputs {
+    /// Pins to drive. Applied in order; last write wins if duplicated.
+    pub pin_writes: Vec<(PinId, PinValue)>,
+    /// MQTT channel publishes. Channel name (not topic) — the event loop
+    /// resolves the channel → topic mapping from the board YAML.
+    pub mqtt_publishes: Vec<(String, MqttValue)>,
+    /// Behavior-initiated bus transmissions. In v1, rare (ICs typically
+    /// respond; only masters initiate). Routed by the event loop.
+    pub bus_transmits: Vec<(BusId, OwnedBusTransaction)>,
+    /// If `Some`, schedule `on_tick` to fire after this delay. One-shot;
+    /// set again from `on_tick` to repeat.
+    pub tick_request: Option<Duration>,
 }
 
+// ── InitCtx ───────────────────────────────────────────────────────────────────
+
+/// Provided to `IcBehavior::init`. Exposes component config, name
+/// resolution, and the ability to set initial pin states and schedule
+/// the first tick.
+pub struct InitCtx<'a> {
+    pub(crate) component_id: ComponentId,
+    /// Pin name (local to this component) → global PinId.
+    pin_map: &'a HashMap<String, PinId>,
+    /// Interface name (local to this component) → global BusId.
+    bus_map: &'a HashMap<String, BusId>,
+    /// Config key → value from the board YAML `component.config` block.
+    config: &'a HashMap<String, ConfigValue>,
+    pub(crate) outputs: PendingOutputs,
+}
+
+impl<'a> InitCtx<'a> {
+    pub(crate) fn new(
+        component_id: ComponentId,
+        pin_map: &'a HashMap<String, PinId>,
+        bus_map: &'a HashMap<String, BusId>,
+        config: &'a HashMap<String, ConfigValue>,
+    ) -> Self {
+        Self {
+            component_id,
+            pin_map,
+            bus_map,
+            config,
+            outputs: PendingOutputs::default(),
+        }
+    }
+
+    /// Resolve a pin name (e.g. `"gpio"`, `"sda"`) to its global `PinId`.
+    /// Returns `None` if the name is not declared in the manifest.
+    pub fn pin_id(&self, name: &str) -> Option<PinId> {
+        self.pin_map.get(name).copied()
+    }
+
+    /// Resolve an interface name (e.g. `"i2c"`, `"spi1"`) to its global `BusId`.
+    /// Returns `None` if the interface name is not known.
+    pub fn bus_id(&self, interface: &str) -> Option<BusId> {
+        self.bus_map.get(interface).copied()
+    }
+
+    /// Read a config value by key (from the board YAML `component.config` block).
+    pub fn config_value(&self, key: &str) -> Option<&ConfigValue> {
+        self.config.get(key)
+    }
+
+    /// Drive an output pin to an initial state. The net is updated after
+    /// all `init` calls complete, so ordering between components is irrelevant.
+    pub fn set_pin(&mut self, pin: PinId, value: PinValue) {
+        self.outputs.pin_writes.push((pin, value));
+    }
+
+    /// Schedule `on_tick` to fire after `delay`. Call again from `on_tick`
+    /// to repeat.
+    pub fn schedule_tick(&mut self, delay: Duration) {
+        self.outputs.tick_request = Some(delay);
+    }
+
+    /// The component this context belongs to.
+    pub fn component_id(&self) -> ComponentId {
+        self.component_id
+    }
+
+    /// Consume the context and return the collected outputs.
+    pub(crate) fn take_outputs(self) -> PendingOutputs {
+        self.outputs
+    }
+}
+
+// ── RunCtx ────────────────────────────────────────────────────────────────────
+
 /// Provided to all run-time `IcBehavior` methods. The IC expresses every
-/// outgoing effect through this object.
+/// outgoing effect through this object; the event loop processes them
+/// after the handler returns.
 pub struct RunCtx<'a> {
-    // TODO: fill in. Likely contains:
-    //   - a queue of pending pin writes
-    //   - a queue of pending MQTT publishes
-    //   - a queue of pending master-side bus transmissions
-    //   - the current SimTime
-    //   - a logger handle
-    _placeholder: std::marker::PhantomData<&'a ()>,
+    pub(crate) now: SimTime,
+    pub(crate) outputs: &'a mut PendingOutputs,
 }
 
 impl<'a> RunCtx<'a> {
-    /// Drive an output pin. No-op if the value matches the current state.
-    pub fn set_pin(&mut self, _pin: PinId, _value: PinValue) {
-        // TODO: enqueue a pin-write event.
-        unimplemented!()
+    pub(crate) fn new(now: SimTime, outputs: &'a mut PendingOutputs) -> Self {
+        Self { now, outputs }
     }
 
-    /// Initiate a bus transaction (only meaningful for masters).
-    pub fn bus_transmit(&mut self, _bus: BusId, _txn: BusTransaction<'_>) {
-        // TODO: enqueue a master-initiated transaction.
-        unimplemented!()
+    /// Drive an output pin. Queued for net resolution after the handler returns.
+    pub fn set_pin(&mut self, pin: PinId, value: PinValue) {
+        self.outputs.pin_writes.push((pin, value));
+    }
+
+    /// Initiate a bus transaction from this IC (master-side; rare in v1).
+    pub fn bus_transmit(&mut self, bus: BusId, txn: OwnedBusTransaction) {
+        self.outputs.bus_transmits.push((bus, txn));
     }
 
     /// Publish an MQTT message. `channel` is the manifest channel name;
-    /// the simulator resolves it to the topic from the board YAML.
-    pub fn mqtt_publish(&mut self, _channel: &str, _payload: MqttValue) {
-        // TODO: enqueue an MQTT publish.
-        unimplemented!()
+    /// the event loop resolves it to the topic from the board YAML.
+    pub fn mqtt_publish(&mut self, channel: &str, payload: MqttValue) {
+        self.outputs.mqtt_publishes.push((channel.to_string(), payload));
     }
 
     /// Schedule `on_tick` to fire after `delay`. One-shot — call again
     /// from `on_tick` to repeat.
-    pub fn schedule_tick(&mut self, _delay: Duration) {
-        // TODO: schedule a tick event.
-        unimplemented!()
+    pub fn schedule_tick(&mut self, delay: Duration) {
+        self.outputs.tick_request = Some(delay);
     }
 
-    /// Current virtual time.
+    /// Current virtual simulation time.
     pub fn now(&self) -> SimTime {
-        // TODO: return the event loop's current SimTime.
-        unimplemented!()
+        self.now
     }
 }
