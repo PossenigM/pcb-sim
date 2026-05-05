@@ -1,0 +1,36 @@
+id: ti/ads7961
+version: "0.1"
+kind: sensor
+description: >
+  Texas Instruments ADS7961 16-channel, 10-bit SPI ADC (ADS79xx family).
+  Each 16-bit SPI frame: master sends a channel-select word; device responds
+  with the previous conversion result (channel number in bits 15..12,
+  10-bit value in bits 11..2).  The behavior tracks the requested channel
+  and returns a voltage-encoded raw value from MQTT subscriptions.
+  MQTT channels: ch0..ch8 (float, volts 0..2.5).
+
+interfaces:
+  - name: spi
+    protocol: spi
+    role: slave
+    pins: [SCK, MOSI, MISO, CS]
+
+pins:
+  - { name: SCK,  dir: in,  default: LOW }
+  - { name: MOSI, dir: in,  default: LOW }
+  - { name: MISO, dir: out, default: Z }
+  - { name: CS,   dir: in,  default: HIGH }
+
+mqtt:
+  subscribe:
+    - { name: ch0, type: float, unit: volts }
+    - { name: ch1, type: float, unit: volts }
+    - { name: ch2, type: float, unit: volts }
+    - { name: ch3, type: float, unit: volts }
+    - { name: ch4, type: float, unit: volts }
+    - { name: ch5, type: float, unit: volts }
+    - { name: ch6, type: float, unit: volts }
+    - { name: ch7, type: float, unit: volts }
+    - { name: ch8, type: float, unit: volts }
+
+behavior: builtin:ads7961

@@ -1,0 +1,208 @@
+board:
+  name: me7492p_digital_twin
+  version: "0.1"
+
+mqtt:
+  broker: tcp://localhost:1883
+  prefix: phem/me7492p/
+
+components:
+  # ── Firmware host (MicroBlaze) ──────────────────────────────────────────────
+  - id: mcu
+    type: xilinx/microblaze_me7492p@0.1
+    firmware:
+      transport: unix_socket
+      path: /tmp/pcb_sim/mcu.sock
+
+  # ── I2C bus 0: IO-Link PHY transceiver (×4) ────────────────────────────────
+  - id: l6360_0
+    type: st/l6360@0.1
+    config:
+      i2c.address: 0x60
+
+  - id: l6360_1
+    type: st/l6360@0.1
+    config:
+      i2c.address: 0x61
+
+  - id: l6360_2
+    type: st/l6360@0.1
+    config:
+      i2c.address: 0x62
+
+  - id: l6360_3
+    type: st/l6360@0.1
+    config:
+      i2c.address: 0x63
+
+  # ── I2C bus 1 (peripheral): mux + sensors ──────────────────────────────────
+  - id: i2c_mux
+    type: nxp/pca9546a@0.1
+    config:
+      i2c.address: 0x70
+
+  # All four SQ619 sensors share address 0x78 behind the PCA9546A mux.
+  # The simulator can only route to one instance per address, so we place a
+  # single SQ619 on the bus; it responds to reads from any mux channel.
+  - id: pressure_sensor
+    type: servoflo/sq619@0.1
+    config:
+      i2c.address: 0x78
+    initial_values:
+      pressure: 10130.0
+    mqtt:
+      subscribe:
+        pressure: sensors/pressure
+
+  - id: io_expander
+    type: nxp/pca9539a@0.1
+    config:
+      i2c.address: 0x76
+
+  - id: pcb_temp
+    type: ti/lm73@0.1
+    config:
+      i2c.address: 0x48
+    initial_values:
+      temperature: 25.0
+    mqtt:
+      subscribe:
+        temperature: sensors/pcb_temperature
+
+  # ── SPI bus: ADC + output driver ────────────────────────────────────────────
+  - id: adc
+    type: ti/ads7961@0.1
+    initial_values:
+      ch0: 0.0
+      ch1: 0.0
+      ch2: 0.0
+      ch3: 0.0
+      ch4: 0.0
+      ch5: 0.0
+      ch6: 0.0
+      ch7: 0.0
+      ch8: 0.0
+    mqtt:
+      subscribe:
+        ch0: sensors/adc/ch0
+        ch1: sensors/adc/ch1
+        ch2: sensors/adc/ch2
+        ch3: sensors/adc/ch3
+        ch4: sensors/adc/ch4
+        ch5: sensors/adc/ch5
+        ch6: sensors/adc/ch6
+        ch7: sensors/adc/ch7
+        ch8: sensors/adc/ch8
+
+  - id: output_driver
+    type: nxp/mc33879@0.1
+    mqtt:
+      publish:
+        outputs: actuators/outputs
+
+  # ── UART stubs ──────────────────────────────────────────────────────────────
+  # Each UART bus requires exactly two peers.  The firmware is one peer; these
+  # stub terminals are the other.  IOL and printhead buses are included so
+  # the firmware can open them without "no such bus" errors; IO-Link and
+  # printhead protocols are not yet simulated.
+  - id: term_stdout
+    type: generic/uart_terminal@0.1
+
+  - id: term_iol0
+    type: generic/uart_terminal@0.1
+
+  - id: term_iol1
+    type: generic/uart_terminal@0.1
+
+  - id: term_iol2
+    type: generic/uart_terminal@0.1
+
+  - id: term_iol3
+    type: generic/uart_terminal@0.1
+
+  - id: term_ph0
+    type: generic/uart_terminal@0.1
+
+  - id: term_ph1
+    type: generic/uart_terminal@0.1
+
+buses:
+  # ── I2C bus 0: main bus (L6360 IO-Link PHYs) ───────────────────────────────
+  - id: i2c_main
+    protocol: i2c
+    members:
+      - { component: mcu,    interface: i2c0 }
+      - { component: l6360_0, interface: i2c }
+      - { component: l6360_1, interface: i2c }
+      - { component: l6360_2, interface: i2c }
+      - { component: l6360_3, interface: i2c }
+
+  # ── I2C bus 1: peripheral bus (mux + sensors) ──────────────────────────────
+  - id: i2c_periph
+    protocol: i2c
+    members:
+      - { component: mcu,            interface: i2c1 }
+      - { component: i2c_mux,        interface: i2c }
+      - { component: pressure_sensor, interface: i2c }
+      - { component: io_expander,    interface: i2c }
+      - { component: pcb_temp,       interface: i2c }
+
+  # ── SPI bus ─────────────────────────────────────────────────────────────────
+  # cs_pin_on_master matches the CS name used by DigitwinSpi: "{bus}_cs{id}"
+  - id: spi_main
+    protocol: spi
+    master:
+      component: mcu
+      interface: spi0
+    slaves:
+      - component: adc
+        interface: spi
+        cs_pin_on_master: spi0_cs0
+      - component: output_driver
+        interface: spi
+        cs_pin_on_master: spi0_cs1
+
+  # ── UART buses ───────────────────────────────────────────────────────────────
+  - id: uart_stdout_bus
+    protocol: uart
+    peers:
+      - { component: mcu,         interface: uart_stdout }
+      - { component: term_stdout, interface: uart }
+
+  - id: uart_iol0_bus
+    protocol: uart
+    peers:
+      - { component: mcu,       interface: uart_iol0 }
+      - { component: term_iol0, interface: uart }
+
+  - id: uart_iol1_bus
+    protocol: uart
+    peers:
+      - { component: mcu,       interface: uart_iol1 }
+      - { component: term_iol1, interface: uart }
+
+  - id: uart_iol2_bus
+    protocol: uart
+    peers:
+      - { component: mcu,       interface: uart_iol2 }
+      - { component: term_iol2, interface: uart }
+
+  - id: uart_iol3_bus
+    protocol: uart
+    peers:
+      - { component: mcu,       interface: uart_iol3 }
+      - { component: term_iol3, interface: uart }
+
+  - id: uart_ph0_bus
+    protocol: uart
+    peers:
+      - { component: mcu,      interface: uart_ph0 }
+      - { component: term_ph0, interface: uart }
+
+  - id: uart_ph1_bus
+    protocol: uart
+    peers:
+      - { component: mcu,      interface: uart_ph1 }
+      - { component: term_ph1, interface: uart }
+
+nets: []

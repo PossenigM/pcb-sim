@@ -1,0 +1,27 @@
+id: nxp/mc33879
+version: "0.1"
+kind: actuator
+description: >
+  NXP MC33879 8-channel configurable serial output driver.
+  2-byte SPI frame: tx[0] = open-load detect mask, tx[1] = output enable mask.
+  Response: rx[0] = 0x00 (unused), rx[1] = fault status from previous frame.
+  The behavior records the output state and publishes it to MQTT.
+  Returns fault status 0x00 (no faults) in simulation.
+
+interfaces:
+  - name: spi
+    protocol: spi
+    role: slave
+    pins: [SCK, MOSI, MISO, CS]
+
+pins:
+  - { name: SCK,  dir: in,  default: LOW }
+  - { name: MOSI, dir: in,  default: LOW }
+  - { name: MISO, dir: out, default: Z }
+  - { name: CS,   dir: in,  default: HIGH }
+
+mqtt:
+  publish:
+    - { name: outputs, type: int }
+
+behavior: builtin:mc33879

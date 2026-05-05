@@ -1,0 +1,19 @@
+id: generic/uart_terminal
+version: "0.1"
+kind: other
+description: >
+  Generic UART terminal stub.  Acts as a second peer on a UART bus so the
+  bus definition is valid (UartRouter requires exactly two endpoints).
+  Discards all received bytes.  Never sends.
+
+interfaces:
+  - name: uart
+    protocol: uart
+    role: peer
+    pins: [TX, RX]
+
+pins:
+  - { name: TX, dir: out, default: HIGH }
+  - { name: RX, dir: in,  default: Z }
+
+behavior: builtin:uart_terminal

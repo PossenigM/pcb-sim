@@ -1,0 +1,29 @@
+id: ti/lm73
+version: "0.1"
+kind: sensor
+description: >
+  Texas Instruments LM73 digital temperature sensor.
+  Firmware writes register pointer 0x00 then reads 2 bytes big-endian.
+  Raw value / 128 = temperature in °C (resolution 0.0078 °C/LSB).
+  Subscribes to an MQTT temperature channel (celsius).
+
+interfaces:
+  - name: i2c
+    protocol: i2c
+    role: slave
+    pins: [SCL, SDA]
+    config:
+      address:
+        type: hex
+        default: 0x48
+        choices: [0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f]
+
+pins:
+  - { name: SCL, dir: in,    default: Z }
+  - { name: SDA, dir: bidir, default: Z }
+
+mqtt:
+  subscribe:
+    - { name: temperature, type: float, unit: celsius }
+
+behavior: builtin:lm73

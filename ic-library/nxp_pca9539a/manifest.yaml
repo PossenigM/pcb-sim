@@ -1,0 +1,27 @@
+id: nxp/pca9539a
+version: "0.1"
+kind: io_expander
+description: >
+  NXP PCA9539A 16-bit I2C I/O expander.  Registers are accessed by writing a
+  register-pointer byte followed by data, or via write-then-read.
+  Register map: In0=0x00, In1=0x01, Out0=0x02, Out1=0x03,
+               Pol0=0x04, Pol1=0x05, Cfg0=0x06, Cfg1=0x07.
+  Input pins return 0 by default (external signals not connected).
+  The behavior supports full register read/write.
+
+interfaces:
+  - name: i2c
+    protocol: i2c
+    role: slave
+    pins: [SCL, SDA]
+    config:
+      address:
+        type: hex
+        default: 0x74
+        choices: [0x74, 0x75, 0x76, 0x77]
+
+pins:
+  - { name: SCL, dir: in,    default: Z }
+  - { name: SDA, dir: bidir, default: Z }
+
+behavior: builtin:pca9539a

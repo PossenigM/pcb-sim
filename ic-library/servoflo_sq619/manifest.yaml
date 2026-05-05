@@ -1,0 +1,29 @@
+id: servoflo/sq619
+version: "0.1"
+kind: sensor
+description: >
+  Servoflo SQ619 absolute pressure sensor.
+  Read-only: master reads 2 bytes to obtain a 15-bit big-endian pressure
+  value (bits 14..0).  Subscribes to an MQTT pressure channel (decimbar)
+  and encodes it into the 15-bit raw format expected by the firmware.
+  Conversion: raw = (pressure_decimbar * 100000 + 58740000 + 50000) / 11581
+
+interfaces:
+  - name: i2c
+    protocol: i2c
+    role: slave
+    pins: [SCL, SDA]
+    config:
+      address:
+        type: hex
+        default: 0x78
+
+pins:
+  - { name: SCL, dir: in,    default: Z }
+  - { name: SDA, dir: bidir, default: Z }
+
+mqtt:
+  subscribe:
+    - { name: pressure, type: float, unit: decimbar }
+
+behavior: builtin:sq619

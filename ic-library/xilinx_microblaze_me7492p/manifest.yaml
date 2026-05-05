@@ -1,0 +1,89 @@
+id: xilinx/microblaze_me7492p
+version: "0.1"
+kind: firmware_host
+description: >
+  Xilinx MicroBlaze soft-core CPU as instantiated in the Kyocera ME7492P FPGA
+  design (digital-twin boundary).  No behavior; the simulator wires an IPC
+  adapter to the declared interfaces via the board YAML firmware: block.
+
+interfaces:
+  # Main I2C bus — L6360 IO-Link PHYs
+  - name: i2c0
+    protocol: i2c
+    role: master
+    pins: [I2C0_SCL, I2C0_SDA]
+
+  # Peripheral I2C bus — mux + sensors
+  - name: i2c1
+    protocol: i2c
+    role: master
+    pins: [I2C1_SCL, I2C1_SDA]
+
+  # SPI bus — ADC + output driver
+  - name: spi0
+    protocol: spi
+    role: master
+    pins: [SPI0_SCK, SPI0_MOSI, SPI0_MISO, SPI0_CS0, SPI0_CS1]
+
+  # Debug / command UART (USB-serial)
+  - name: uart_stdout
+    protocol: uart
+    role: peer
+    pins: [UART_STDOUT_TX, UART_STDOUT_RX]
+
+  # IO-Link UART channels (one per port)
+  - name: uart_iol0
+    protocol: uart
+    role: peer
+    pins: [UART_IOL0_TX, UART_IOL0_RX]
+
+  - name: uart_iol1
+    protocol: uart
+    role: peer
+    pins: [UART_IOL1_TX, UART_IOL1_RX]
+
+  - name: uart_iol2
+    protocol: uart
+    role: peer
+    pins: [UART_IOL2_TX, UART_IOL2_RX]
+
+  - name: uart_iol3
+    protocol: uart
+    role: peer
+    pins: [UART_IOL3_TX, UART_IOL3_RX]
+
+  # Printhead UART channels
+  - name: uart_ph0
+    protocol: uart
+    role: peer
+    pins: [UART_PH0_TX, UART_PH0_RX]
+
+  - name: uart_ph1
+    protocol: uart
+    role: peer
+    pins: [UART_PH1_TX, UART_PH1_RX]
+
+pins:
+  - { name: I2C0_SCL,       dir: bidir, default: Z }
+  - { name: I2C0_SDA,       dir: bidir, default: Z }
+  - { name: I2C1_SCL,       dir: bidir, default: Z }
+  - { name: I2C1_SDA,       dir: bidir, default: Z }
+  - { name: SPI0_SCK,       dir: out,   default: LOW }
+  - { name: SPI0_MOSI,      dir: out,   default: LOW }
+  - { name: SPI0_MISO,      dir: in,    default: Z }
+  - { name: SPI0_CS0,       dir: out,   default: HIGH }
+  - { name: SPI0_CS1,       dir: out,   default: HIGH }
+  - { name: UART_STDOUT_TX, dir: out,   default: HIGH }
+  - { name: UART_STDOUT_RX, dir: in,    default: Z }
+  - { name: UART_IOL0_TX,   dir: out,   default: HIGH }
+  - { name: UART_IOL0_RX,   dir: in,    default: Z }
+  - { name: UART_IOL1_TX,   dir: out,   default: HIGH }
+  - { name: UART_IOL1_RX,   dir: in,    default: Z }
+  - { name: UART_IOL2_TX,   dir: out,   default: HIGH }
+  - { name: UART_IOL2_RX,   dir: in,    default: Z }
+  - { name: UART_IOL3_TX,   dir: out,   default: HIGH }
+  - { name: UART_IOL3_RX,   dir: in,    default: Z }
+  - { name: UART_PH0_TX,    dir: out,   default: HIGH }
+  - { name: UART_PH0_RX,    dir: in,    default: Z }
+  - { name: UART_PH1_TX,    dir: out,   default: HIGH }
+  - { name: UART_PH1_RX,    dir: in,    default: Z }

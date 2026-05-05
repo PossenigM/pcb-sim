@@ -1,0 +1,25 @@
+id: st/l6360
+version: "0.1"
+kind: other
+description: >
+  STMicroelectronics L6360 IO-Link device transceiver (PHY).
+  Exposes a register-mapped I2C slave interface for configuration and status
+  readback.  The behavior simulates healthy power-on state and accepts
+  CONFIG/CTRL/LED block writes.
+
+interfaces:
+  - name: i2c
+    protocol: i2c
+    role: slave
+    pins: [SCL, SDA]
+    config:
+      address:
+        type: hex
+        default: 0x60
+        choices: [0x60, 0x61, 0x62, 0x63]
+
+pins:
+  - { name: SCL, dir: in,    default: Z }
+  - { name: SDA, dir: bidir, default: Z }
+
+behavior: builtin:l6360
