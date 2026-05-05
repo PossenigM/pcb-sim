@@ -10,11 +10,18 @@ Web-based authoring tool for board YAML files.
 ## Backend
 
 ```bash
-cd backend
+cd ..
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ..[dev]
-uvicorn app:app --reload
+pip install -e .
+uvicorn backend.app:app --reload
+```
+
+`.[dev]` is optional. It installs test and lint tooling and is not needed just
+to run the editor:
+
+```bash
+pip install -e '.[dev]'
 ```
 
 API reference (skeleton):
@@ -28,6 +35,8 @@ API reference (skeleton):
 | POST   | `/api/import`        | YAML → editor model.                        |
 
 ## Frontend
+
+Requires Node 18+ because this app uses Vite 5.
 
 ```bash
 cd frontend
