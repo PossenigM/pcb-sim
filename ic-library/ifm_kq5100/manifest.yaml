@@ -1,0 +1,29 @@
+id: ifm/kq5100
+version: "0.1"
+kind: sensor
+description: >
+  IFM KQ5100 capacitive level sensor with IO-Link interface.
+  Communicates via IO-Link protocol (UART physical layer) through an L6360
+  PHY transceiver.  Process data is a 16-bit word:
+    bits 15..4:  12-bit level value (0..1645, unitless)
+    bits 3..1:   reserved
+    bit 0:       switch state OUT1 (1 = active)
+  The behavior responds to IO-Link TYPE_0 (startup) and TYPE_2 (operate)
+  M-sequences.  In operate mode it returns the level value sourced from an
+  MQTT subscription.
+
+interfaces:
+  - name: uart
+    protocol: uart
+    role: peer
+    pins: [TX, RX]
+
+pins:
+  - { name: TX, dir: out, default: HIGH }
+  - { name: RX, dir: in,  default: Z }
+
+mqtt:
+  subscribe:
+    - { name: level, type: float, unit: unitless }
+
+behavior: builtin:kq5100

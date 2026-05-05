@@ -2,13 +2,13 @@ id: nxp/pca9546a
 version: "0.1"
 kind: logic
 description: >
-  NXP PCA9546A 4-channel I2C multiplexer.  A single-byte write selects which
-  downstream channel(s) are enabled (bit N → channel N).  The simulator
-  treats the mux as transparent: it records the channel-select byte and
-  acknowledges all writes.  Downstream devices behind the mux must be
-  assigned unique addresses on the same I2C bus.
+  NXP PCA9546A 4-channel I2C multiplexer.  A single-byte write to the
+  upstream address selects which downstream channel(s) are enabled
+  (bit N → channel N).  Downstream devices share addresses across channels
+  since only one channel is active at a time.
 
 interfaces:
+  # Upstream port — sits on the parent I2C bus as a slave
   - name: i2c
     protocol: i2c
     role: slave
@@ -19,8 +19,40 @@ interfaces:
         default: 0x70
         choices: [0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77]
 
+  # Downstream channel 0
+  - name: i2c_ch0
+    protocol: i2c
+    role: master
+    pins: [CH0_SCL, CH0_SDA]
+
+  # Downstream channel 1
+  - name: i2c_ch1
+    protocol: i2c
+    role: master
+    pins: [CH1_SCL, CH1_SDA]
+
+  # Downstream channel 2
+  - name: i2c_ch2
+    protocol: i2c
+    role: master
+    pins: [CH2_SCL, CH2_SDA]
+
+  # Downstream channel 3
+  - name: i2c_ch3
+    protocol: i2c
+    role: master
+    pins: [CH3_SCL, CH3_SDA]
+
 pins:
-  - { name: SCL, dir: in,    default: Z }
-  - { name: SDA, dir: bidir, default: Z }
+  - { name: SCL,      dir: in,    default: Z }
+  - { name: SDA,      dir: bidir, default: Z }
+  - { name: CH0_SCL,  dir: bidir, default: Z }
+  - { name: CH0_SDA,  dir: bidir, default: Z }
+  - { name: CH1_SCL,  dir: bidir, default: Z }
+  - { name: CH1_SDA,  dir: bidir, default: Z }
+  - { name: CH2_SCL,  dir: bidir, default: Z }
+  - { name: CH2_SDA,  dir: bidir, default: Z }
+  - { name: CH3_SCL,  dir: bidir, default: Z }
+  - { name: CH3_SDA,  dir: bidir, default: Z }
 
 behavior: builtin:pca9546a

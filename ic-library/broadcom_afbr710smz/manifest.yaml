@@ -1,0 +1,34 @@
+id: broadcom/afbr710smz
+version: "0.1"
+kind: transceiver
+description: >
+  Broadcom AFBR-710SMZ SFP fiber-optic transceiver module.
+  Exposes two I2C slave addresses: 0x50 (serial ID / configuration registers)
+  and 0x51 (diagnostic monitoring registers, DOM).
+  Four control/status signals are exposed via the PCA9539A IO expander:
+    - SFP_MOD  (input, active-low module-present)
+    - RX_LOSS  (input, active-high loss-of-signal)
+    - TX_FAULT (input, active-high transmitter fault)
+    - TX_DISABLE (output, active-high transmitter disable)
+  The behavior simulates a healthy, present module: SFP_MOD=0, RX_LOSS=0,
+  TX_FAULT=0, TX_DISABLE controlled by IO expander.
+
+interfaces:
+  - name: i2c
+    protocol: i2c
+    role: slave
+    pins: [SCL, SDA]
+    config:
+      addresses:
+        - 0x50
+        - 0x51
+
+pins:
+  - { name: SCL,        dir: in,    default: Z }
+  - { name: SDA,        dir: bidir, default: Z }
+  - { name: SFP_MOD,    dir: out,   default: LOW }
+  - { name: RX_LOSS,    dir: out,   default: LOW }
+  - { name: TX_FAULT,   dir: out,   default: LOW }
+  - { name: TX_DISABLE, dir: in,    default: LOW }
+
+behavior: builtin:afbr710smz

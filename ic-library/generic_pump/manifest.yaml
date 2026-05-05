@@ -1,0 +1,23 @@
+id: generic/pump
+version: "0.1"
+kind: actuator
+description: >
+  Generic pump actuator with PWM and Enable inputs.
+  The pump publishes its state to MQTT only when the ENABLE pin is HIGH.
+  When ENABLE is LOW the pump is off regardless of the PWM signal.
+  PWM pin drives the pump speed; ENABLE acts as a gate.
+
+interfaces:
+  - name: gpio
+    protocol: gpio
+    pins: [PWM, ENABLE]
+
+pins:
+  - { name: PWM,    dir: in, default: LOW }
+  - { name: ENABLE, dir: in, default: LOW }
+
+mqtt:
+  publish:
+    - { name: state, type: bool }
+
+behavior: builtin:pump

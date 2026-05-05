@@ -1,0 +1,31 @@
+id: kyocera/kj4b
+version: "0.1"
+kind: actuator
+description: >
+  Kyocera KJ4B inkjet printhead (covers EX300 and EX600 variants).
+  Communicates over UART using a proprietary packet protocol:
+    TX: [0xFE 0xFE 0xFE] [N] [CMD] [PAYLOAD...] [CHECKSUM]
+    RX: [0xFE 0xFE 0xFE] [N] [CMD] [RES1|PAYLOAD...] [CHECKSUM]
+  Where N = payload_len + 2, CHECKSUM = -(N + CMD + sum(payload)) & 0xFF.
+  RES1 bit 7 = 1 indicates a valid/successful response.
+  The behavior simulates a healthy printhead: all commands succeed,
+  temperature sensor returns an MQTT-subscribed value, and the heater
+  target temperature is published to MQTT.
+
+interfaces:
+  - name: uart
+    protocol: uart
+    role: peer
+    pins: [TX, RX]
+
+pins:
+  - { name: TX, dir: out, default: HIGH }
+  - { name: RX, dir: in,  default: Z }
+
+mqtt:
+  subscribe:
+    - { name: temperature, type: float, unit: centi_celsius }
+  publish:
+    - { name: heater_target, type: float, unit: centi_celsius }
+
+behavior: builtin:kj4b

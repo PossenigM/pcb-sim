@@ -63,6 +63,11 @@ interfaces:
     role: peer
     pins: [UART_PH1_TX, UART_PH1_RX]
 
+  # FPGA PWM outputs — pump drives (one register per pump)
+  - name: pwm
+    protocol: gpio
+    pins: [PWM_PUMP0, PWM_PUMP1, PWM_PUMP2, PWM_PUMP3]
+
 pins:
   - { name: I2C0_SCL,       dir: bidir, default: Z }
   - { name: I2C0_SDA,       dir: bidir, default: Z }
@@ -86,4 +91,8 @@ pins:
   - { name: UART_PH0_TX,    dir: out,   default: HIGH }
   - { name: UART_PH0_RX,    dir: in,    default: Z }
   - { name: UART_PH1_TX,    dir: out,   default: HIGH }
-  - { name: UART_PH1_RX,    dir: in,    default: Z }
+  - { name: UART_PH1_RX,   dir: in,    default: Z }
+  - { name: PWM_PUMP0,     dir: out,   default: LOW }
+  - { name: PWM_PUMP1,     dir: out,   default: LOW }
+  - { name: PWM_PUMP2,     dir: out,   default: LOW }
+  - { name: PWM_PUMP3,     dir: out,   default: LOW }

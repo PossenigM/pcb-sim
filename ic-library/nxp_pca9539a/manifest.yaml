@@ -9,6 +9,18 @@ description: >
   Input pins return 0 by default (external signals not connected).
   The behavior supports full register read/write.
 
+  ME7492P pin assignment (active on this board):
+    Port 0 (pins 0..7):
+      0..3  — Revision Pins (input, board HW revision)
+      4..7  — Pump Enable Pins (output, pump motor enable)
+    Port 1 (pins 8..15):
+      8     — SFP_MOD   (input from AFBR-710SMZ, active-low module-present)
+      9     — RX_LOSS   (input from AFBR-710SMZ, active-high loss-of-signal)
+      10    — TX_FAULT  (input from AFBR-710SMZ, active-high TX fault)
+      11    — TX_DISABLE (output to AFBR-710SMZ, active-high TX disable)
+      12..14 — unused
+      15    — PSENS_ON  (output, pressure-sensor power enable)
+
 interfaces:
   - name: i2c
     protocol: i2c
@@ -20,8 +32,29 @@ interfaces:
         default: 0x74
         choices: [0x74, 0x75, 0x76, 0x77]
 
+  - name: gpio
+    protocol: gpio
+    pins: [P0_0, P0_1, P0_2, P0_3, P0_4, P0_5, P0_6, P0_7,
+           P1_0, P1_1, P1_2, P1_3, P1_4, P1_5, P1_6, P1_7]
+
 pins:
-  - { name: SCL, dir: in,    default: Z }
-  - { name: SDA, dir: bidir, default: Z }
+  - { name: SCL,  dir: in,    default: Z }
+  - { name: SDA,  dir: bidir, default: Z }
+  - { name: P0_0, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P0_1, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P0_2, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P0_3, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P0_4, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P0_5, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P0_6, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P0_7, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P1_0, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P1_1, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P1_2, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P1_3, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P1_4, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P1_5, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P1_6, dir: bidir, default: Z, runtime_configurable: true }
+  - { name: P1_7, dir: bidir, default: Z, runtime_configurable: true }
 
 behavior: builtin:pca9539a

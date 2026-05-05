@@ -8,6 +8,16 @@ description: >
   The behavior records the output state and publishes it to MQTT.
   Returns fault status 0x00 (no faults) in simulation.
 
+  ME7492P output assignment:
+    S1 — Meniscus1-Valve
+    S2 — Purge-Valve
+    S3 — (unused)
+    S4 — Block1-Valve
+    S5 — Block2-Valve
+    S6 — Meniscus2-Valve
+    S7 — (unused)
+    S8 — (unused)
+
 interfaces:
   - name: spi
     protocol: spi

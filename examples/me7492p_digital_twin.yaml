@@ -41,10 +41,8 @@ components:
     config:
       i2c.address: 0x70
 
-  # All four SQ619 sensors share address 0x78 behind the PCA9546A mux.
-  # The simulator can only route to one instance per address, so we place a
-  # single SQ619 on the bus; it responds to reads from any mux channel.
-  - id: pressure_sensor
+  # Four SQ619 pressure sensors, each behind one channel of the PCA9546A mux.
+  - id: pressure_sensor_0
     type: servoflo/sq619@0.1
     config:
       i2c.address: 0x78
@@ -52,12 +50,53 @@ components:
       pressure: 10130.0
     mqtt:
       subscribe:
-        pressure: sensors/pressure
+        pressure: sensors/pressure/0
+
+  - id: pressure_sensor_1
+    type: servoflo/sq619@0.1
+    config:
+      i2c.address: 0x78
+    initial_values:
+      pressure: 10130.0
+    mqtt:
+      subscribe:
+        pressure: sensors/pressure/1
+
+  - id: pressure_sensor_2
+    type: servoflo/sq619@0.1
+    config:
+      i2c.address: 0x78
+    initial_values:
+      pressure: 10130.0
+    mqtt:
+      subscribe:
+        pressure: sensors/pressure/2
+
+  - id: pressure_sensor_3
+    type: servoflo/sq619@0.1
+    config:
+      i2c.address: 0x78
+    initial_values:
+      pressure: 10130.0
+    mqtt:
+      subscribe:
+        pressure: sensors/pressure/3
 
   - id: io_expander
     type: nxp/pca9539a@0.1
     config:
       i2c.address: 0x76
+      # Fixed revision pins (P0_0..P0_3 = board HW revision 0b0001)
+      fixed_inputs:
+        P0_0: HIGH
+        P0_1: LOW
+        P0_2: LOW
+        P0_3: LOW
+
+  - id: sfp_module
+    type: broadcom/afbr710smz@0.1
+    config:
+      i2c.addresses: [0x50, 0x51]
 
   - id: pcb_temp
     type: ti/lm73@0.1
@@ -96,35 +135,87 @@ components:
 
   - id: output_driver
     type: nxp/mc33879@0.1
+    config:
+      signal_names:
+        S1: Meniscus1-Valve
+        S2: Purge-Valve
+        S4: Block1-Valve
+        S5: Block2-Valve
+        S6: Meniscus2-Valve
     mqtt:
       publish:
         outputs: actuators/outputs
 
-  # ── UART stubs ──────────────────────────────────────────────────────────────
-  # Each UART bus requires exactly two peers.  The firmware is one peer; these
-  # stub terminals are the other.  IOL and printhead buses are included so
-  # the firmware can open them without "no such bus" errors; IO-Link and
-  # printhead protocols are not yet simulated.
+  # ── UART: debug terminal ─────────────────────────────────────────────────────
   - id: term_stdout
     type: generic/uart_terminal@0.1
 
-  - id: term_iol0
-    type: generic/uart_terminal@0.1
+  # ── IO-Link level sensors (KQ5100) via L6360 PHY ────────────────────────────
+  - id: kq5100_0
+    type: ifm/kq5100@0.1
+    mqtt:
+      subscribe:
+        level: sensors/iol/level0
 
-  - id: term_iol1
-    type: generic/uart_terminal@0.1
+  - id: kq5100_1
+    type: ifm/kq5100@0.1
+    mqtt:
+      subscribe:
+        level: sensors/iol/level1
 
-  - id: term_iol2
-    type: generic/uart_terminal@0.1
+  - id: kq5100_2
+    type: ifm/kq5100@0.1
+    mqtt:
+      subscribe:
+        level: sensors/iol/level2
 
-  - id: term_iol3
-    type: generic/uart_terminal@0.1
+  - id: kq5100_3
+    type: ifm/kq5100@0.1
+    mqtt:
+      subscribe:
+        level: sensors/iol/level3
 
-  - id: term_ph0
-    type: generic/uart_terminal@0.1
+  # ── Kyocera KJ4B printheads ─────────────────────────────────────────────────
+  - id: printhead_0
+    type: kyocera/kj4b@0.1
+    mqtt:
+      subscribe:
+        temperature: ph/0/temperature
+      publish:
+        heater_target: ph/0/heater
 
-  - id: term_ph1
-    type: generic/uart_terminal@0.1
+  - id: printhead_1
+    type: kyocera/kj4b@0.1
+    mqtt:
+      subscribe:
+        temperature: ph/1/temperature
+      publish:
+        heater_target: ph/1/heater
+
+  # ── Pumps (driven by FPGA PWM + IO expander enable) ──────────────────────────
+  - id: pump_0
+    type: generic/pump@0.1
+    mqtt:
+      publish:
+        state: actuators/pump/0
+
+  - id: pump_1
+    type: generic/pump@0.1
+    mqtt:
+      publish:
+        state: actuators/pump/1
+
+  - id: pump_2
+    type: generic/pump@0.1
+    mqtt:
+      publish:
+        state: actuators/pump/2
+
+  - id: pump_3
+    type: generic/pump@0.1
+    mqtt:
+      publish:
+        state: actuators/pump/3
 
 buses:
   # ── I2C bus 0: main bus (L6360 IO-Link PHYs) ───────────────────────────────
@@ -137,15 +228,40 @@ buses:
       - { component: l6360_2, interface: i2c }
       - { component: l6360_3, interface: i2c }
 
-  # ── I2C bus 1: peripheral bus (mux + sensors) ──────────────────────────────
+  # ── I2C bus 1: peripheral bus (mux + IO expander + SFP + temp) ────────────────
   - id: i2c_periph
     protocol: i2c
     members:
-      - { component: mcu,            interface: i2c1 }
-      - { component: i2c_mux,        interface: i2c }
-      - { component: pressure_sensor, interface: i2c }
-      - { component: io_expander,    interface: i2c }
-      - { component: pcb_temp,       interface: i2c }
+      - { component: mcu,              interface: i2c1 }
+      - { component: i2c_mux,          interface: i2c }
+      - { component: io_expander,      interface: i2c }
+      - { component: sfp_module,       interface: i2c }
+      - { component: pcb_temp,         interface: i2c }
+
+  # ── I2C mux downstream channels (one SQ619 per channel) ────────────────────
+  - id: i2c_mux_ch0
+    protocol: i2c
+    members:
+      - { component: i2c_mux,          interface: i2c_ch0 }
+      - { component: pressure_sensor_0, interface: i2c }
+
+  - id: i2c_mux_ch1
+    protocol: i2c
+    members:
+      - { component: i2c_mux,          interface: i2c_ch1 }
+      - { component: pressure_sensor_1, interface: i2c }
+
+  - id: i2c_mux_ch2
+    protocol: i2c
+    members:
+      - { component: i2c_mux,          interface: i2c_ch2 }
+      - { component: pressure_sensor_2, interface: i2c }
+
+  - id: i2c_mux_ch3
+    protocol: i2c
+    members:
+      - { component: i2c_mux,          interface: i2c_ch3 }
+      - { component: pressure_sensor_3, interface: i2c }
 
   # ── SPI bus ─────────────────────────────────────────────────────────────────
   # cs_pin_on_master matches the CS name used by DigitwinSpi: "{bus}_cs{id}"
@@ -173,36 +289,87 @@ buses:
     protocol: uart
     peers:
       - { component: mcu,       interface: uart_iol0 }
-      - { component: term_iol0, interface: uart }
+      - { component: kq5100_0,  interface: uart }
 
   - id: uart_iol1_bus
     protocol: uart
     peers:
       - { component: mcu,       interface: uart_iol1 }
-      - { component: term_iol1, interface: uart }
+      - { component: kq5100_1,  interface: uart }
 
   - id: uart_iol2_bus
     protocol: uart
     peers:
       - { component: mcu,       interface: uart_iol2 }
-      - { component: term_iol2, interface: uart }
+      - { component: kq5100_2,  interface: uart }
 
   - id: uart_iol3_bus
     protocol: uart
     peers:
       - { component: mcu,       interface: uart_iol3 }
-      - { component: term_iol3, interface: uart }
+      - { component: kq5100_3,  interface: uart }
 
   - id: uart_ph0_bus
     protocol: uart
     peers:
-      - { component: mcu,      interface: uart_ph0 }
-      - { component: term_ph0, interface: uart }
+      - { component: mcu,         interface: uart_ph0 }
+      - { component: printhead_0, interface: uart }
 
   - id: uart_ph1_bus
     protocol: uart
     peers:
-      - { component: mcu,      interface: uart_ph1 }
-      - { component: term_ph1, interface: uart }
+      - { component: mcu,         interface: uart_ph1 }
+      - { component: printhead_1, interface: uart }
 
-nets: []
+nets:
+  # PWM pump outputs from FPGA to pump actuators
+  - id: net_pwm_pump0
+    endpoints:
+      - { component: mcu, pin: PWM_PUMP0 }
+      - { component: pump_0, pin: PWM }
+  - id: net_pwm_pump1
+    endpoints:
+      - { component: mcu, pin: PWM_PUMP1 }
+      - { component: pump_1, pin: PWM }
+  - id: net_pwm_pump2
+    endpoints:
+      - { component: mcu, pin: PWM_PUMP2 }
+      - { component: pump_2, pin: PWM }
+  - id: net_pwm_pump3
+    endpoints:
+      - { component: mcu, pin: PWM_PUMP3 }
+      - { component: pump_3, pin: PWM }
+  # Pump enable signals from IO expander (P0_4..P0_7)
+  - id: net_pump_en0
+    endpoints:
+      - { component: io_expander, pin: P0_4 }
+      - { component: pump_0, pin: ENABLE }
+  - id: net_pump_en1
+    endpoints:
+      - { component: io_expander, pin: P0_5 }
+      - { component: pump_1, pin: ENABLE }
+  - id: net_pump_en2
+    endpoints:
+      - { component: io_expander, pin: P0_6 }
+      - { component: pump_2, pin: ENABLE }
+  - id: net_pump_en3
+    endpoints:
+      - { component: io_expander, pin: P0_7 }
+      - { component: pump_3, pin: ENABLE }
+  # SFP signals connected to IO expander (P1_0..P1_3)
+  - id: net_sfp_mod
+    endpoints:
+      - { component: sfp_module, pin: SFP_MOD }
+      - { component: io_expander, pin: P1_0 }
+  - id: net_rx_loss
+    endpoints:
+      - { component: sfp_module, pin: RX_LOSS }
+      - { component: io_expander, pin: P1_1 }
+  - id: net_tx_fault
+    endpoints:
+      - { component: sfp_module, pin: TX_FAULT }
+      - { component: io_expander, pin: P1_2 }
+  - id: net_tx_disable
+    endpoints:
+      - { component: io_expander, pin: P1_3 }
+      - { component: sfp_module, pin: TX_DISABLE }
