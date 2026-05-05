@@ -21,12 +21,11 @@ use sim_core::IcBehavior;
 /// (the part after `builtin:`).
 ///
 /// Returns `None` if no behavior is registered under that key.
-pub fn registry(_key: &str) -> Option<Box<dyn IcBehavior>> {
-    // TODO: match _key {
-    //     "bme280"   => Some(Box::new(bme280::Bme280::new())),
-    //     "mcp23017" => Some(Box::new(mcp23017::Mcp23017::new())),
-    //     "gpio_led" => Some(Box::new(gpio_led::GpioLed::new())),
-    //     _ => None,
-    // }
-    unimplemented!()
+pub fn registry(key: &str) -> Option<Box<dyn IcBehavior>> {
+    match key {
+        "bme280"   => Some(Box::new(bme280::Bme280::new())),
+        "mcp23017" => Some(Box::new(mcp23017::Mcp23017::new())),
+        "gpio_led" => Some(Box::new(gpio_led::GpioLed::new())),
+        _ => None,
+    }
 }
