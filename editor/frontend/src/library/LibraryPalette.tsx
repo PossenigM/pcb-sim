@@ -1,48 +1,78 @@
-interface IcSummary {
-  id: string;
-  version: string;
-  kind: string;
-  description?: string;
-  icon_url?: string;
-}
+import type { IcSummary } from "../types";
 
 interface Props {
   ics: IcSummary[];
 }
 
-/**
- * Sidebar palette listing every IC in the library. Drag an entry onto
- * the canvas to instantiate it.
- *
- * TODO:
- *   - Drag handler that sets reactflow drag data.
- *   - Group by `kind` (sensors, actuators, expanders, MCUs).
- *   - Search/filter input.
- *   - Tooltips with manifest details.
- */
+const KIND_ORDER = ["firmware_host", "sensor", "actuator", "io_expander", "logic", "other"];
+const KIND_LABELS: Record<string, string> = {
+  firmware_host: "MCU",
+  sensor: "Sensors",
+  actuator: "Actuators",
+  io_expander: "IO Expanders",
+  logic: "Logic",
+  other: "Other",
+};
+
 export default function LibraryPalette({ ics }: Props) {
+  const grouped = groupByKind(ics);
+
   return (
-    <div style={{ padding: 12 }}>
-      <h3 style={{ marginTop: 0 }}>IC library</h3>
-      {ics.length === 0 && <p style={{ color: "#888" }}>No ICs loaded.</p>}
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {ics.map((ic) => (
-          <li
-            key={ic.id + ic.version}
-            style={{
-              padding: "8px 4px",
-              borderBottom: "1px solid #eee",
-              cursor: "grab",
-            }}
-            // TODO: onDragStart handler for react-flow drop integration
-          >
-            <div style={{ fontWeight: 600 }}>{ic.id}</div>
-            <div style={{ fontSize: 12, color: "#666" }}>
-              {ic.kind} · v{ic.version}
+    <div style={{ padding: 10, fontFamily: "system-ui, sans-serif", fontSize: 13 }}>
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: "#111827" }}>
+        IC Library
+      </div>
+      {ics.length === 0 && <p style={{ color: "#9ca3af", fontSize: 12 }}>Loading…</p>}
+
+      {KIND_ORDER.filter((k) => grouped[k]?.length).map((kind) => (
+        <div key={kind} style={{ marginBottom: 10 }}>
+          <div style={{
+            fontSize: 10, fontWeight: 700, textTransform: "uppercase",
+            color: "#6b7280", letterSpacing: "0.05em", marginBottom: 4,
+          }}>
+            {KIND_LABELS[kind] ?? kind}
+          </div>
+
+          {grouped[kind].map((ic) => (
+            <div
+              key={ic.id + ic.version}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("application/ic_id", ic.id);
+                e.dataTransfer.effectAllowed = "copy";
+              }}
+              style={{
+                padding: "6px 8px",
+                marginBottom: 3,
+                borderRadius: 5,
+                border: "1px solid #e5e7eb",
+                background: "#f9fafb",
+                cursor: "grab",
+                userSelect: "none",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#eff6ff"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f9fafb"; }}
+            >
+              <div style={{ fontWeight: 600, color: "#111827" }}>{ic.id}</div>
+              {ic.description && (
+                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1, lineHeight: 1.3 }}>
+                  {ic.description.slice(0, 60)}{ic.description.length > 60 ? "…" : ""}
+                </div>
+              )}
+              <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>v{ic.version}</div>
             </div>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+      ))}
     </div>
   );
+}
+
+function groupByKind(ics: IcSummary[]): Record<string, IcSummary[]> {
+  const out: Record<string, IcSummary[]> = {};
+  for (const ic of ics) {
+    const k = ic.kind ?? "other";
+    (out[k] ??= []).push(ic);
+  }
+  return out;
 }
