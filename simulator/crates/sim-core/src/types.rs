@@ -94,7 +94,7 @@ pub enum BusResponse {
 }
 
 /// MQTT payload — strongly typed so behaviors don't parse strings.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MqttValue {
     Bool(bool),
     Int(i64),
