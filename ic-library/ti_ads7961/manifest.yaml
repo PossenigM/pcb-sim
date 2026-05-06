@@ -7,7 +7,7 @@ description: >
   with the previous conversion result (channel number in bits 15..12,
   10-bit value in bits 11..2).  The behavior tracks the requested channel
   and returns a voltage-encoded raw value from MQTT subscriptions.
-  MQTT channels: ch0..ch8 (float, volts 0..2.5).
+  MQTT channels: ch0..ch15 (float, volts 0..2.5).
 
 interfaces:
   - name: spi
@@ -23,14 +23,21 @@ pins:
 
 mqtt:
   subscribe:
-    - { name: ch0, type: float, unit: volts }
-    - { name: ch1, type: float, unit: volts }
-    - { name: ch2, type: float, unit: volts }
-    - { name: ch3, type: float, unit: volts }
-    - { name: ch4, type: float, unit: volts }
-    - { name: ch5, type: float, unit: volts }
-    - { name: ch6, type: float, unit: volts }
-    - { name: ch7, type: float, unit: volts }
-    - { name: ch8, type: float, unit: volts }
+    - { name: ch0,  type: float, unit: volts }
+    - { name: ch1,  type: float, unit: volts }
+    - { name: ch2,  type: float, unit: volts }
+    - { name: ch3,  type: float, unit: volts }
+    - { name: ch4,  type: float, unit: volts }
+    - { name: ch5,  type: float, unit: volts }
+    - { name: ch6,  type: float, unit: volts }
+    - { name: ch7,  type: float, unit: volts }
+    - { name: ch8,  type: float, unit: volts }
+    - { name: ch9,  type: float, unit: volts }
+    - { name: ch10, type: float, unit: volts }
+    - { name: ch11, type: float, unit: volts }
+    - { name: ch12, type: float, unit: volts }
+    - { name: ch13, type: float, unit: volts }
+    - { name: ch14, type: float, unit: volts }
+    - { name: ch15, type: float, unit: volts }
 
 behavior: builtin:ads7961

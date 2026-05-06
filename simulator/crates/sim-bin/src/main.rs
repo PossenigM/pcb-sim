@@ -431,6 +431,15 @@ fn yaml_to_config_value(v: &serde_yaml::Value) -> Option<ConfigValue> {
         serde_yaml::Value::Number(n) => n.as_f64().map(ConfigValue::Number),
         serde_yaml::Value::String(s) => Some(ConfigValue::String(s.clone())),
         serde_yaml::Value::Bool(b)   => Some(ConfigValue::Bool(*b)),
+        serde_yaml::Value::Mapping(m) => {
+            let mut map = HashMap::new();
+            for (k, val) in m {
+                if let (Some(ks), Some(vs)) = (k.as_str(), val.as_str()) {
+                    map.insert(ks.to_owned(), vs.to_owned());
+                }
+            }
+            if map.is_empty() { None } else { Some(ConfigValue::Map(map)) }
+        }
         _ => None,
     }
 }

@@ -108,4 +108,3 @@ pins:
   - { name: PWM_PUMP1,     dir: out,   default: LOW }
   - { name: PWM_PUMP2,     dir: out,   default: LOW }
   - { name: PWM_PUMP3,     dir: out,   default: LOW }
-  - { name: PWM_PUMP3,     dir: out,   default: LOW }

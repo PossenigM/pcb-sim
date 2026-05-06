@@ -104,12 +104,13 @@ pub enum MqttValue {
 }
 
 /// A config value from the board YAML's `component.config` block.
-/// Covers the three types a manifest config field can have: string, number, bool.
+/// Covers scalar types plus string→string maps (e.g. `fixed_inputs`).
 #[derive(Debug, Clone)]
 pub enum ConfigValue {
     String(String),
     Number(f64),
     Bool(bool),
+    Map(std::collections::HashMap<String, String>),
 }
 
 impl ConfigValue {
@@ -121,6 +122,9 @@ impl ConfigValue {
     }
     pub fn as_bool(&self) -> Option<bool> {
         if let Self::Bool(b) = self { Some(*b) } else { None }
+    }
+    pub fn as_map(&self) -> Option<&std::collections::HashMap<String, String>> {
+        if let Self::Map(m) = self { Some(m) } else { None }
     }
 }
 

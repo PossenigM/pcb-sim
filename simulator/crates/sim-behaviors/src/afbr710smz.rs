@@ -9,13 +9,16 @@
 //! TX_FAULT, TX_DISABLE) are exposed as pins and wired to the PCA9539A
 //! IO expander in the board YAML.
 
-use sim_core::{BusResponse, BusTransaction, IcBehavior, IcError, InitCtx, RunCtx};
+use sim_core::{BusResponse, BusTransaction, IcBehavior, IcError, InitCtx, PinId, PinValue, RunCtx};
 
 /// 256-byte register spaces for each I2C address.
 pub struct Afbr710Smz {
     regs_a0: [u8; 256], // 0x50 registers (serial ID)
     regs_a2: [u8; 256], // 0x51 registers (DOM)
     reg_ptr: u8,
+    pin_sfp_mod: Option<PinId>,
+    pin_rx_loss: Option<PinId>,
+    pin_tx_fault: Option<PinId>,
 }
 
 impl Afbr710Smz {
@@ -41,6 +44,9 @@ impl Afbr710Smz {
             regs_a0,
             regs_a2,
             reg_ptr: 0,
+            pin_sfp_mod: None,
+            pin_rx_loss: None,
+            pin_tx_fault: None,
         }
     }
 }
@@ -52,7 +58,21 @@ impl Default for Afbr710Smz {
 }
 
 impl IcBehavior for Afbr710Smz {
-    fn init(&mut self, _ctx: &mut InitCtx<'_>) -> Result<(), IcError> {
+    fn init(&mut self, ctx: &mut InitCtx<'_>) -> Result<(), IcError> {
+        // Drive status pins to "healthy module" state.
+        self.pin_sfp_mod = ctx.pin_id("SFP_MOD");
+        self.pin_rx_loss = ctx.pin_id("RX_LOSS");
+        self.pin_tx_fault = ctx.pin_id("TX_FAULT");
+
+        if let Some(pin) = self.pin_sfp_mod {
+            ctx.set_pin(pin, PinValue::Low); // Module present (active-low)
+        }
+        if let Some(pin) = self.pin_rx_loss {
+            ctx.set_pin(pin, PinValue::Low); // No loss of signal
+        }
+        if let Some(pin) = self.pin_tx_fault {
+            ctx.set_pin(pin, PinValue::Low); // No TX fault
+        }
         Ok(())
     }
 
