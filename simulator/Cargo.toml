@@ -42,6 +42,8 @@ anyhow = "1"
 # MQTT
 rumqttc = "0.24"
 
+libc = "0.2"
+
 # Internal crates
 sim-core      = { path = "crates/sim-core" }
 sim-protocol  = { path = "crates/sim-protocol" }

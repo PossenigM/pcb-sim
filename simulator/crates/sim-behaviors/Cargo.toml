@@ -7,3 +7,4 @@ license.workspace = true
 [dependencies]
 sim-core = { workspace = true }
 tracing = { workspace = true }
+libc = { workspace = true }
