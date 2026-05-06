@@ -9,6 +9,8 @@ pub enum PinValue {
     High,
     /// High-impedance: pin is not actively driving.
     HighZ,
+    /// Integer-valued analog/PWM signal (e.g. duty cycle 0–255 or RPM).
+    Analog(u32),
 }
 
 impl fmt::Display for PinValue {
@@ -17,6 +19,7 @@ impl fmt::Display for PinValue {
             Self::Low => write!(f, "LOW"),
             Self::High => write!(f, "HIGH"),
             Self::HighZ => write!(f, "Z"),
+            Self::Analog(v) => write!(f, "ANALOG({v})"),
         }
     }
 }

@@ -189,30 +189,51 @@ components:
       publish:
         heater_target: ph/1/heater
 
-  # ── Pumps (driven by FPGA PWM + IO expander enable) ──────────────────────────
+  # ── Pumps (PWM duty forwarded directly from MCU; tacho fed back from physics) ──
   - id: pump_0
     type: generic/pump@0.1
     mqtt:
       publish:
-        state: actuators/pump/0
+        pwm: actuators/pump/0
+      subscribe:
+        tacho: physics/pump/0/tacho
 
   - id: pump_1
     type: generic/pump@0.1
     mqtt:
       publish:
-        state: actuators/pump/1
+        pwm: actuators/pump/1
+      subscribe:
+        tacho: physics/pump/1/tacho
 
   - id: pump_2
     type: generic/pump@0.1
     mqtt:
       publish:
-        state: actuators/pump/2
+        pwm: actuators/pump/2
+      subscribe:
+        tacho: physics/pump/2/tacho
 
   - id: pump_3
     type: generic/pump@0.1
     mqtt:
       publish:
-        state: actuators/pump/3
+        pwm: actuators/pump/3
+      subscribe:
+        tacho: physics/pump/3/tacho
+
+  # ── Heaters (PWM duty forwarded directly from MCU) ───────────────────────────
+  - id: heater_0
+    type: generic/heater@0.1
+    mqtt:
+      publish:
+        pwm: actuators/heater/0
+
+  - id: heater_1
+    type: generic/heater@0.1
+    mqtt:
+      publish:
+        pwm: actuators/heater/1
 
 buses:
   # ── I2C bus 0: main bus (L6360 IO-Link PHYs) ───────────────────────────────
@@ -319,7 +340,7 @@ buses:
       - { component: printhead_1, interface: uart }
 
 nets:
-  # PWM pump outputs from FPGA to pump actuators
+  # PWM pump outputs: MCU FPGA register → pump (Analog duty cycle 0–255)
   - id: net_pwm_pump0
     endpoints:
       - { component: mcu, pin: PWM_PUMP0 }
@@ -336,6 +357,23 @@ nets:
     endpoints:
       - { component: mcu, pin: PWM_PUMP3 }
       - { component: pump_3, pin: PWM }
+  # Pump tacho feedback: pump → MCU FPGA status register (Analog RPM)
+  - id: net_tacho_pump0
+    endpoints:
+      - { component: pump_0, pin: TACHO }
+      - { component: mcu, pin: TACHO_PUMP0 }
+  - id: net_tacho_pump1
+    endpoints:
+      - { component: pump_1, pin: TACHO }
+      - { component: mcu, pin: TACHO_PUMP1 }
+  - id: net_tacho_pump2
+    endpoints:
+      - { component: pump_2, pin: TACHO }
+      - { component: mcu, pin: TACHO_PUMP2 }
+  - id: net_tacho_pump3
+    endpoints:
+      - { component: pump_3, pin: TACHO }
+      - { component: mcu, pin: TACHO_PUMP3 }
   # Pump enable signals from IO expander
   # Firmware maps: pump0=x96→P0_6, pump1=x97→P0_5, pump2=x98→P0_7, pump3=x99→P0_4
   - id: net_pump_en0
@@ -354,6 +392,15 @@ nets:
     endpoints:
       - { component: io_expander, pin: P0_4 }
       - { component: pump_3, pin: ENABLE }
+  # Heater PWM outputs: MCU FPGA register → heater (Analog duty cycle 0–255)
+  - id: net_pwm_heater0
+    endpoints:
+      - { component: mcu, pin: PWM_HEATER0 }
+      - { component: heater_0, pin: PWM }
+  - id: net_pwm_heater1
+    endpoints:
+      - { component: mcu, pin: PWM_HEATER1 }
+      - { component: heater_1, pin: PWM }
   # SFP signals connected to IO expander (P1_0..P1_3)
   - id: net_sfp_mod
     endpoints:

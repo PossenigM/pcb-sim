@@ -38,7 +38,7 @@ impl IcBehavior for GpioLed {
         ctx: &mut RunCtx<'_>,
     ) -> Result<(), IcError> {
         let state = match value {
-            PinValue::High => true,
+            PinValue::High | PinValue::Analog(_) => true,
             PinValue::Low => false,
             // HighZ: leave state unchanged. Real LEDs would be off, but
             // most boards have a pull resistor; not modeling that here.

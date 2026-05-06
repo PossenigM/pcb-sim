@@ -128,17 +128,19 @@ async fn write_msg<W: AsyncWriteExt + Unpin>(w: &mut W, msg: &ServerMessage) -> 
 
 fn pin_from_wire(v: PinValueWire) -> PinValue {
     match v {
-        PinValueWire::Low  => PinValue::Low,
-        PinValueWire::High => PinValue::High,
-        PinValueWire::Z    => PinValue::HighZ,
+        PinValueWire::Low        => PinValue::Low,
+        PinValueWire::High       => PinValue::High,
+        PinValueWire::Z          => PinValue::HighZ,
+        PinValueWire::Analog(v)  => PinValue::Analog(v),
     }
 }
 
 fn pin_to_wire(v: PinValue) -> PinValueWire {
     match v {
-        PinValue::Low   => PinValueWire::Low,
-        PinValue::High  => PinValueWire::High,
-        PinValue::HighZ => PinValueWire::Z,
+        PinValue::Low        => PinValueWire::Low,
+        PinValue::High       => PinValueWire::High,
+        PinValue::HighZ      => PinValueWire::Z,
+        PinValue::Analog(v)  => PinValueWire::Analog(v),
     }
 }
 

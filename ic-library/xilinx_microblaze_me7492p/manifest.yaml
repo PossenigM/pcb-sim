@@ -69,10 +69,20 @@ interfaces:
     role: peer
     pins: [UART_PH1_TX, UART_PH1_RX]
 
-  # FPGA PWM outputs — pump drives (one register per pump)
-  - name: pwm
+  # FPGA PWM outputs — pump drives (duty cycle 0–255 as Analog pin value)
+  - name: pwm_pump
     protocol: gpio
     pins: [PWM_PUMP0, PWM_PUMP1, PWM_PUMP2, PWM_PUMP3]
+
+  # FPGA status inputs — pump tacho feedback (RPM as Analog pin value)
+  - name: tacho_pump
+    protocol: gpio
+    pins: [TACHO_PUMP0, TACHO_PUMP1, TACHO_PUMP2, TACHO_PUMP3]
+
+  # FPGA PWM outputs — heater drives (duty cycle 0–255 as Analog pin value)
+  - name: pwm_heater
+    protocol: gpio
+    pins: [PWM_HEATER0, PWM_HEATER1]
 
 pins:
   - { name: I2C0_SCL,       dir: bidir, default: Z }
@@ -108,3 +118,9 @@ pins:
   - { name: PWM_PUMP1,     dir: out,   default: LOW }
   - { name: PWM_PUMP2,     dir: out,   default: LOW }
   - { name: PWM_PUMP3,     dir: out,   default: LOW }
+  - { name: TACHO_PUMP0,   dir: in,    default: LOW }
+  - { name: TACHO_PUMP1,   dir: in,    default: LOW }
+  - { name: TACHO_PUMP2,   dir: in,    default: LOW }
+  - { name: TACHO_PUMP3,   dir: in,    default: LOW }
+  - { name: PWM_HEATER0,   dir: out,   default: LOW }
+  - { name: PWM_HEATER1,   dir: out,   default: LOW }

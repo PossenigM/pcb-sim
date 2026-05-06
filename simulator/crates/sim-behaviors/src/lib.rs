@@ -18,6 +18,7 @@ pub mod afbr710smz;
 pub mod bme280;
 pub mod ds2482_100;
 pub mod gpio_led;
+pub mod heater;
 pub mod kj4b;
 pub mod kq5100;
 pub mod l6360;
@@ -45,6 +46,7 @@ pub fn registry(key: &str) -> Option<Box<dyn IcBehavior>> {
         "bme280"        => Some(Box::new(bme280::Bme280::new())),
         "ds2482_100"    => Some(Box::new(ds2482_100::Ds2482_100::new())),
         "gpio_led"      => Some(Box::new(gpio_led::GpioLed::new())),
+        "heater"        => Some(Box::new(heater::Heater::new())),
         "kj4b"          => Some(Box::new(kj4b::Kj4b::new())),
         "kq5100"        => Some(Box::new(kq5100::Kq5100::new())),
         "l6360"         => Some(Box::new(l6360::L6360::new())),

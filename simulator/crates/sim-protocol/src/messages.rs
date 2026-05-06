@@ -169,6 +169,8 @@ pub enum PinValueWire {
     Low,
     High,
     Z,
+    /// Integer-valued analog/PWM signal (e.g. duty cycle 0–255 or RPM).
+    Analog(u32),
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
