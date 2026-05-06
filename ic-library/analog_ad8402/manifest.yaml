@@ -1,0 +1,29 @@
+id: analog/ad8402
+version: "0.1"
+kind: actuator
+description: >
+  Analog Devices AD8402 dual-channel 256-position digital potentiometer.
+  SPI interface: 2-byte transfer per write — byte 0 = wiper value (0–255),
+  byte 1 = channel address (0 or 1).  No readback supported.
+  Full-scale resistance is 10 kΩ (fixed in simulation; user may override
+  with config.r_max_ohms).  Resistance = value / 255 × r_max.
+  Publishes resistance for each channel via MQTT on every change.
+
+interfaces:
+  - name: spi
+    protocol: spi
+    role: slave
+    pins: [SCK, MOSI, MISO, CS]
+
+pins:
+  - { name: SCK,  dir: in,  default: LOW }
+  - { name: MOSI, dir: in,  default: LOW }
+  - { name: MISO, dir: out, default: Z }
+  - { name: CS,   dir: in,  default: HIGH }
+
+mqtt:
+  publish:
+    - { name: ch0_resistance, type: float, unit: ohms }
+    - { name: ch1_resistance, type: float, unit: ohms }
+
+behavior: builtin:ad8402

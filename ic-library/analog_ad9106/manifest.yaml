@@ -1,0 +1,37 @@
+id: analog/ad9106
+version: "0.1"
+kind: actuator
+description: >
+  Analog Devices AD9106 4-channel waveform generator with SPI register map.
+  SPI frame: 4 bytes (two 16-bit words, MSB-first).
+    Word 0: bit 15 = R/nW, bits 14:0 = register address.
+    Word 1: register data (16-bit).
+  Implements full SPI register read/write (SIZE_REGISTER_MAP = 0x61 registers).
+  On pattern-arm (PAT_STATUS.PATTERN_START = 1) publishes the configured
+  per-channel gain and DC offset as normalized floating-point values to MQTT.
+  Channels: DAC1 (index 0) … DAC4 (index 3).
+
+interfaces:
+  - name: spi
+    protocol: spi
+    role: slave
+    pins: [SCK, MOSI, MISO, CS]
+
+pins:
+  - { name: SCK,  dir: in,  default: LOW }
+  - { name: MOSI, dir: in,  default: LOW }
+  - { name: MISO, dir: out, default: Z }
+  - { name: CS,   dir: in,  default: HIGH }
+
+mqtt:
+  publish:
+    - { name: dac1_gain,   type: float, unit: normalized }
+    - { name: dac2_gain,   type: float, unit: normalized }
+    - { name: dac3_gain,   type: float, unit: normalized }
+    - { name: dac4_gain,   type: float, unit: normalized }
+    - { name: dac1_offset, type: float, unit: normalized }
+    - { name: dac2_offset, type: float, unit: normalized }
+    - { name: dac3_offset, type: float, unit: normalized }
+    - { name: dac4_offset, type: float, unit: normalized }
+
+behavior: builtin:ad9106

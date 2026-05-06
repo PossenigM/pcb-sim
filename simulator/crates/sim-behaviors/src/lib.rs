@@ -11,9 +11,12 @@
 //! 3. Add an arm to `registry()` matching the manifest's behavior key.
 //! 4. Write a unit test using a mock `RunCtx`.
 
+pub mod ad8402;
+pub mod ad9106;
 pub mod ads7961;
 pub mod afbr710smz;
 pub mod bme280;
+pub mod ds2482_100;
 pub mod gpio_led;
 pub mod kj4b;
 pub mod kq5100;
@@ -35,9 +38,12 @@ use sim_core::IcBehavior;
 /// Returns `None` if no behavior is registered under that key.
 pub fn registry(key: &str) -> Option<Box<dyn IcBehavior>> {
     match key {
+        "ad8402"        => Some(Box::new(ad8402::Ad8402::new())),
+        "ad9106"        => Some(Box::new(ad9106::Ad9106::new())),
         "ads7961"       => Some(Box::new(ads7961::Ads7961::new())),
         "afbr710smz"    => Some(Box::new(afbr710smz::Afbr710Smz::new())),
         "bme280"        => Some(Box::new(bme280::Bme280::new())),
+        "ds2482_100"    => Some(Box::new(ds2482_100::Ds2482_100::new())),
         "gpio_led"      => Some(Box::new(gpio_led::GpioLed::new())),
         "kj4b"          => Some(Box::new(kj4b::Kj4b::new())),
         "kq5100"        => Some(Box::new(kq5100::Kq5100::new())),

@@ -1,0 +1,20 @@
+id: generic/heater
+version: "0.1"
+kind: actuator
+description: >
+  Generic heater actuator with a PWM input.
+  Publishes the current PWM duty-cycle value to MQTT whenever it changes.
+
+interfaces:
+  - name: gpio
+    protocol: gpio
+    pins: [PWM]
+
+pins:
+  - { name: PWM, dir: in, default: LOW }
+
+mqtt:
+  publish:
+    - { name: pwm, type: int }
+
+behavior: builtin:heater

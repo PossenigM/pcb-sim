@@ -1,6 +1,6 @@
 id: broadcom/afbr710smz
 version: "0.1"
-kind: transceiver
+kind: other
 description: >
   Broadcom AFBR-710SMZ SFP fiber-optic transceiver module.
   Exposes two I2C slave addresses: 0x50 (serial ID / configuration registers)
@@ -18,10 +18,6 @@ interfaces:
     protocol: i2c
     role: slave
     pins: [SCL, SDA]
-    config:
-      addresses:
-        - 0x50
-        - 0x51
 
 pins:
   - { name: SCL,        dir: in,    default: Z }

@@ -144,7 +144,11 @@ components:
         S6: Meniscus2-Valve
     mqtt:
       publish:
-        outputs: actuators/outputs
+        S1: actuators/valves/meniscus1
+        S2: actuators/valves/purge
+        S4: actuators/valves/block1
+        S5: actuators/valves/block2
+        S6: actuators/valves/meniscus2
 
   # ── UART: debug terminal ─────────────────────────────────────────────────────
   - id: term_stdout
@@ -264,7 +268,7 @@ buses:
       - { component: pressure_sensor_3, interface: i2c }
 
   # ── SPI bus ─────────────────────────────────────────────────────────────────
-  # cs_pin_on_master matches the CS name used by DigitwinSpi: "{bus}_cs{id}"
+  # cs_pin_on_master must match the exact pin name in the MicroBlaze manifest.
   - id: spi_main
     protocol: spi
     master:
@@ -273,10 +277,10 @@ buses:
     slaves:
       - component: adc
         interface: spi
-        cs_pin_on_master: spi0_cs0
+        cs_pin_on_master: SPI0_CS0
       - component: output_driver
         interface: spi
-        cs_pin_on_master: spi0_cs1
+        cs_pin_on_master: SPI0_CS1
 
   # ── UART buses ───────────────────────────────────────────────────────────────
   - id: uart_stdout_bus

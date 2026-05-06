@@ -1,0 +1,33 @@
+id: maxim/ds2482_100
+version: "0.1"
+kind: sensor
+description: >
+  Maxim DS2482-100 I2C-to-1-Wire bridge with virtual DS18X20 temperature sensor.
+  Implements the DS2482-100 command protocol over I2C:
+    0xF0 Device Reset, 0xD2 Write Config, 0xB4 1-Wire Reset,
+    0xA5 1-Wire Write Byte, 0x96 1-Wire Read Byte, 0xE1 Set Read Pointer.
+  Internally simulates a single DS18X20 on the virtual 1-Wire bus.
+  Responds to SkipROM (0xCC) + ConvertT (0x44) and ReadScratchpad (0xBE)
+  sequences, returning a 9-byte scratchpad with the MQTT-supplied temperature.
+  Temperature is received as °C (float) via MQTT.
+
+interfaces:
+  - name: i2c
+    protocol: i2c
+    role: slave
+    pins: [SCL, SDA]
+    config:
+      address:
+        type: hex
+        default: 0x18
+        choices: [0x18, 0x19, 0x1A, 0x1B]
+
+pins:
+  - { name: SCL, dir: in,    default: Z }
+  - { name: SDA, dir: bidir, default: Z }
+
+mqtt:
+  subscribe:
+    - { name: temperature, type: float, unit: celsius }
+
+behavior: builtin:ds2482_100

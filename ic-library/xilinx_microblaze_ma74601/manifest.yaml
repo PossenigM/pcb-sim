@@ -1,0 +1,78 @@
+id: xilinx/microblaze_ma74601
+version: "0.1"
+kind: firmware_host
+description: >
+  Xilinx MicroBlaze soft-core CPU as instantiated in the MA74601 FPGA design
+  (digital-twin boundary).  No behavior; the simulator wires an IPC adapter
+  to the declared interfaces via the board YAML firmware: block.
+
+interfaces:
+  # Main I2C bus — IO expander, pressure mux, DS2482 temp sensor
+  - name: i2c0
+    protocol: i2c
+    role: master
+    pins: [I2C0_SCL, I2C0_SDA]
+
+  # SPI bus 0 — 8-bit mode (Flash AT45DB161D, file-backed in DigitalTwin)
+  - name: spi0
+    protocol: spi
+    role: master
+    pins: [SPI0_SCK, SPI0_MOSI, SPI0_MISO, SPI0_CS0]
+
+  # SPI bus 1 — 16-bit mode
+  # CS0,CS1: ADS7957 ADCs; CS2-CS5: AD9106 DACs; CS6,CS7: AD8402 digipots; CS8: MC33879
+  - name: spi1
+    protocol: spi
+    role: master
+    pins: [SPI1_SCK, SPI1_MOSI, SPI1_MISO,
+           SPI1_CS0, SPI1_CS1, SPI1_CS2, SPI1_CS3,
+           SPI1_CS4, SPI1_CS5, SPI1_CS6, SPI1_CS7, SPI1_CS8]
+
+  # Debug / command UART (USB-serial)
+  - name: uart_stdout
+    protocol: uart
+    role: peer
+    pins: [UART_STDOUT_TX, UART_STDOUT_RX]
+
+  # FPGA PWM outputs — pump drives
+  - name: pwm_pumps
+    protocol: gpio
+    pins: [PWM_PUMP0, PWM_PUMP1, PWM_PUMP2, PWM_PUMP3]
+
+  # FPGA PWM outputs — heater drives
+  - name: pwm_heaters
+    protocol: gpio
+    pins: [PWM_HEATER_PH0, PWM_HEATER_PH1, PWM_HEATER_PH2, PWM_HEATER_PH3,
+           PWM_HEATER_SECTANK, PWM_HEATER_DIST]
+
+pins:
+  - { name: I2C0_SCL,       dir: bidir, default: Z }
+  - { name: I2C0_SDA,       dir: bidir, default: Z }
+  - { name: SPI0_SCK,       dir: out,   default: LOW }
+  - { name: SPI0_MOSI,      dir: out,   default: LOW }
+  - { name: SPI0_MISO,      dir: in,    default: Z }
+  - { name: SPI0_CS0,       dir: out,   default: HIGH }
+  - { name: SPI1_SCK,       dir: out,   default: LOW }
+  - { name: SPI1_MOSI,      dir: out,   default: LOW }
+  - { name: SPI1_MISO,      dir: in,    default: Z }
+  - { name: SPI1_CS0,       dir: out,   default: HIGH }
+  - { name: SPI1_CS1,       dir: out,   default: HIGH }
+  - { name: SPI1_CS2,       dir: out,   default: HIGH }
+  - { name: SPI1_CS3,       dir: out,   default: HIGH }
+  - { name: SPI1_CS4,       dir: out,   default: HIGH }
+  - { name: SPI1_CS5,       dir: out,   default: HIGH }
+  - { name: SPI1_CS6,       dir: out,   default: HIGH }
+  - { name: SPI1_CS7,       dir: out,   default: HIGH }
+  - { name: SPI1_CS8,       dir: out,   default: HIGH }
+  - { name: UART_STDOUT_TX, dir: out,   default: HIGH }
+  - { name: UART_STDOUT_RX, dir: in,    default: Z }
+  - { name: PWM_PUMP0,          dir: out,   default: LOW }
+  - { name: PWM_PUMP1,          dir: out,   default: LOW }
+  - { name: PWM_PUMP2,          dir: out,   default: LOW }
+  - { name: PWM_PUMP3,          dir: out,   default: LOW }
+  - { name: PWM_HEATER_PH0,    dir: out,   default: LOW }
+  - { name: PWM_HEATER_PH1,    dir: out,   default: LOW }
+  - { name: PWM_HEATER_PH2,    dir: out,   default: LOW }
+  - { name: PWM_HEATER_PH3,    dir: out,   default: LOW }
+  - { name: PWM_HEATER_SECTANK, dir: out,  default: LOW }
+  - { name: PWM_HEATER_DIST,   dir: out,   default: LOW }

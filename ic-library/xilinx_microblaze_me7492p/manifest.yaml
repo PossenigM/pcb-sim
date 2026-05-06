@@ -19,11 +19,17 @@ interfaces:
     role: master
     pins: [I2C1_SCL, I2C1_SDA]
 
-  # SPI bus — ADC + output driver
+  # SPI bus 0 — 8-bit mode (ME7492P: ADC cs0, output driver cs1)
   - name: spi0
     protocol: spi
     role: master
     pins: [SPI0_SCK, SPI0_MOSI, SPI0_MISO, SPI0_CS0, SPI0_CS1]
+
+  # SPI bus 1 — 16-bit mode (MA74601: ADS7957 cs0/cs1, MC33879 cs8)
+  - name: spi1
+    protocol: spi
+    role: master
+    pins: [SPI1_SCK, SPI1_MOSI, SPI1_MISO, SPI1_CS0, SPI1_CS1, SPI1_CS8]
 
   # Debug / command UART (USB-serial)
   - name: uart_stdout
@@ -78,6 +84,12 @@ pins:
   - { name: SPI0_MISO,      dir: in,    default: Z }
   - { name: SPI0_CS0,       dir: out,   default: HIGH }
   - { name: SPI0_CS1,       dir: out,   default: HIGH }
+  - { name: SPI1_SCK,       dir: out,   default: LOW }
+  - { name: SPI1_MOSI,      dir: out,   default: LOW }
+  - { name: SPI1_MISO,      dir: in,    default: Z }
+  - { name: SPI1_CS0,       dir: out,   default: HIGH }
+  - { name: SPI1_CS1,       dir: out,   default: HIGH }
+  - { name: SPI1_CS8,       dir: out,   default: HIGH }
   - { name: UART_STDOUT_TX, dir: out,   default: HIGH }
   - { name: UART_STDOUT_RX, dir: in,    default: Z }
   - { name: UART_IOL0_TX,   dir: out,   default: HIGH }

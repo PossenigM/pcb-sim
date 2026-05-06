@@ -1,0 +1,432 @@
+board:
+  name: ma74601_1d
+  version: "0.1"
+
+mqtt:
+  broker: tcp://localhost:1883
+  prefix: phem/ma74601/
+
+components:
+  # ── Firmware host (MicroBlaze) ──────────────────────────────────────────────
+  - id: mcu
+    type: xilinx/microblaze_ma74601@0.1
+    firmware:
+      transport: unix_socket
+      path: /tmp/pcb_sim/mcu.sock
+
+  # ── I2C bus 0: IO expander + pressure mux + DS2482 temp sensor ────────────
+  - id: io_expander
+    type: nxp/pca9539a@0.1
+    config:
+      i2c.address: 0x75
+      # Fixed revision pins (P0_0..P0_3 = board HW revision 0b0001)
+      fixed_inputs:
+        P0_0: HIGH
+        P0_1: LOW
+        P0_2: LOW
+        P0_3: LOW
+
+  - id: pressure_mux
+    type: nxp/pca9546a@0.1
+    config:
+      i2c.address: 0x70
+
+  - id: temp_sensor
+    type: maxim/ds2482_100@0.1
+    config:
+      i2c.address: 0x30
+    mqtt:
+      subscribe:
+        temperature: sensors/temperature
+
+  - id: sfp_module
+    type: broadcom/afbr710smz@0.1
+    config:
+      i2c.addresses: [0x50, 0x51]
+
+  # ── SQ619 pressure sensors — each on a PCA9546A mux channel ────────────────
+  - id: pressure_sensor_0
+    type: servoflo/sq619@0.1
+    initial_values:
+      pressure: 10130.0
+    mqtt:
+      subscribe:
+        pressure: sensors/pressure/0
+
+  - id: pressure_sensor_1
+    type: servoflo/sq619@0.1
+    initial_values:
+      pressure: 10130.0
+    mqtt:
+      subscribe:
+        pressure: sensors/pressure/1
+
+  - id: pressure_sensor_2
+    type: servoflo/sq619@0.1
+    initial_values:
+      pressure: 10130.0
+    mqtt:
+      subscribe:
+        pressure: sensors/pressure/2
+
+  - id: pressure_sensor_3
+    type: servoflo/sq619@0.1
+    initial_values:
+      pressure: 10130.0
+    mqtt:
+      subscribe:
+        pressure: sensors/pressure/3
+
+  # ── SPI bus 1 — ADS7957 ADCs (CS0, CS1) ────────────────────────────────────
+  - id: adc_v189
+    type: ti/ads7961@0.1
+    initial_values:
+      ch0: 0.0
+      ch1: 0.0
+      ch2: 0.0
+      ch3: 0.0
+      ch4: 0.0
+      ch5: 0.0
+      ch6: 0.0
+      ch7: 0.0
+    mqtt:
+      subscribe:
+        ch0: sensors/adc/ch0
+        ch1: sensors/adc/ch1
+        ch2: sensors/adc/ch2
+        ch3: sensors/adc/ch3
+        ch4: sensors/adc/ch4
+        ch5: sensors/adc/ch5
+        ch6: sensors/adc/ch6
+        ch7: sensors/adc/ch7
+
+  - id: adc_v190
+    type: ti/ads7961@0.1
+    initial_values:
+      ch0: 0.0
+      ch1: 0.0
+      ch2: 0.0
+      ch3: 0.0
+      ch4: 0.0
+      ch5: 0.0
+      ch6: 0.0
+      ch7: 0.0
+    mqtt:
+      subscribe:
+        ch0: sensors/adc/ch8
+        ch1: sensors/adc/ch9
+        ch2: sensors/adc/ch10
+        ch3: sensors/adc/ch11
+        ch4: sensors/adc/ch12
+        ch5: sensors/adc/ch13
+        ch6: sensors/adc/ch14
+        ch7: sensors/adc/ch15
+
+  # ── SPI bus 1 — AD9106 waveform generators (CS2..CS5) ──────────────────────
+  - id: ad9106_0
+    type: analog/ad9106@0.1
+    mqtt:
+      publish:
+        dac1_gain:   waveform/0/dac1/gain
+        dac2_gain:   waveform/0/dac2/gain
+        dac3_gain:   waveform/0/dac3/gain
+        dac4_gain:   waveform/0/dac4/gain
+        dac1_offset: waveform/0/dac1/offset
+        dac2_offset: waveform/0/dac2/offset
+        dac3_offset: waveform/0/dac3/offset
+        dac4_offset: waveform/0/dac4/offset
+
+  - id: ad9106_1
+    type: analog/ad9106@0.1
+    mqtt:
+      publish:
+        dac1_gain:   waveform/1/dac1/gain
+        dac2_gain:   waveform/1/dac2/gain
+        dac3_gain:   waveform/1/dac3/gain
+        dac4_gain:   waveform/1/dac4/gain
+        dac1_offset: waveform/1/dac1/offset
+        dac2_offset: waveform/1/dac2/offset
+        dac3_offset: waveform/1/dac3/offset
+        dac4_offset: waveform/1/dac4/offset
+
+  - id: ad9106_2
+    type: analog/ad9106@0.1
+    mqtt:
+      publish:
+        dac1_gain:   waveform/2/dac1/gain
+        dac2_gain:   waveform/2/dac2/gain
+        dac3_gain:   waveform/2/dac3/gain
+        dac4_gain:   waveform/2/dac4/gain
+        dac1_offset: waveform/2/dac1/offset
+        dac2_offset: waveform/2/dac2/offset
+        dac3_offset: waveform/2/dac3/offset
+        dac4_offset: waveform/2/dac4/offset
+
+  - id: ad9106_3
+    type: analog/ad9106@0.1
+    mqtt:
+      publish:
+        dac1_gain:   waveform/3/dac1/gain
+        dac2_gain:   waveform/3/dac2/gain
+        dac3_gain:   waveform/3/dac3/gain
+        dac4_gain:   waveform/3/dac4/gain
+        dac1_offset: waveform/3/dac1/offset
+        dac2_offset: waveform/3/dac2/offset
+        dac3_offset: waveform/3/dac3/offset
+        dac4_offset: waveform/3/dac4/offset
+
+  # ── SPI bus 1 — AD8402 digital potentiometers (CS6, CS7) ───────────────────
+  - id: ad8402_v23
+    type: analog/ad8402@0.1
+    mqtt:
+      publish:
+        ch0_resistance: actuators/digipot/v23/ch0
+        ch1_resistance: actuators/digipot/v23/ch1
+
+  - id: ad8402_v24
+    type: analog/ad8402@0.1
+    mqtt:
+      publish:
+        ch0_resistance: actuators/digipot/v24/ch0
+        ch1_resistance: actuators/digipot/v24/ch1
+
+  # ── SPI bus 1 — MC33879 valve driver (CS8) ─────────────────────────────────
+  - id: valve_driver
+    type: nxp/mc33879@0.1
+    config:
+      signal_names:
+        S1: Meniscus1-Valve
+        S2: Purge-Valve
+        S4: Block1-Valve
+        S5: Block2-Valve
+        S6: Meniscus2-Valve
+    mqtt:
+      publish:
+        S1: actuators/valves/meniscus1
+        S2: actuators/valves/purge
+        S4: actuators/valves/block1
+        S5: actuators/valves/block2
+        S6: actuators/valves/meniscus2
+
+  # ── UART: debug terminal ─────────────────────────────────────────────────────
+  - id: term_stdout
+    type: generic/uart_terminal@0.1
+
+  # ── Pumps (driven by FPGA PWM + IO expander enable) ──────────────────────────
+  - id: pump_0
+    type: generic/pump@0.1
+    mqtt:
+      publish:
+        state: actuators/pump/0
+
+  - id: pump_1
+    type: generic/pump@0.1
+    mqtt:
+      publish:
+        state: actuators/pump/1
+
+  - id: pump_2
+    type: generic/pump@0.1
+    mqtt:
+      publish:
+        state: actuators/pump/2
+
+  - id: pump_3
+    type: generic/pump@0.1
+    mqtt:
+      publish:
+        state: actuators/pump/3
+
+  # ── Heaters (driven by FPGA PWM) ────────────────────────────────────────────
+  - id: heater_ph0
+    type: generic/heater@0.1
+    mqtt:
+      publish:
+        pwm: actuators/heater/ph0
+
+  - id: heater_ph1
+    type: generic/heater@0.1
+    mqtt:
+      publish:
+        pwm: actuators/heater/ph1
+
+  - id: heater_ph2
+    type: generic/heater@0.1
+    mqtt:
+      publish:
+        pwm: actuators/heater/ph2
+
+  - id: heater_ph3
+    type: generic/heater@0.1
+    mqtt:
+      publish:
+        pwm: actuators/heater/ph3
+
+  - id: heater_sectank
+    type: generic/heater@0.1
+    mqtt:
+      publish:
+        pwm: actuators/heater/sectank
+
+  - id: heater_dist
+    type: generic/heater@0.1
+    mqtt:
+      publish:
+        pwm: actuators/heater/distributor
+
+buses:
+  # ── I2C bus 0: main bus ───────────────────────────────────────────────────
+  - id: i2c_main
+    protocol: i2c
+    members:
+      - { component: mcu,          interface: i2c0 }
+      - { component: io_expander,  interface: i2c }
+      - { component: pressure_mux, interface: i2c }
+      - { component: temp_sensor,  interface: i2c }
+      - { component: sfp_module,   interface: i2c }
+
+  # ── I2C mux downstream channels ────────────────────────────────────────────
+  - id: i2c_mux_ch0
+    protocol: i2c
+    members:
+      - { component: pressure_mux,      interface: i2c_ch0 }
+      - { component: pressure_sensor_0, interface: i2c }
+
+  - id: i2c_mux_ch1
+    protocol: i2c
+    members:
+      - { component: pressure_mux,      interface: i2c_ch1 }
+      - { component: pressure_sensor_1, interface: i2c }
+
+  - id: i2c_mux_ch2
+    protocol: i2c
+    members:
+      - { component: pressure_mux,      interface: i2c_ch2 }
+      - { component: pressure_sensor_2, interface: i2c }
+
+  - id: i2c_mux_ch3
+    protocol: i2c
+    members:
+      - { component: pressure_mux,      interface: i2c_ch3 }
+      - { component: pressure_sensor_3, interface: i2c }
+
+  # ── SPI bus 1 (16-bit): ADCs + DACs + digipots + valve driver ───────────────
+  # cs_pin_on_master must match the exact pin name in the MicroBlaze manifest.
+  - id: spi1_main
+    protocol: spi
+    master:
+      component: mcu
+      interface: spi1
+    slaves:
+      - component: adc_v189
+        interface: spi
+        cs_pin_on_master: SPI1_CS0
+      - component: adc_v190
+        interface: spi
+        cs_pin_on_master: SPI1_CS1
+      - component: ad9106_0
+        interface: spi
+        cs_pin_on_master: SPI1_CS2
+      - component: ad9106_1
+        interface: spi
+        cs_pin_on_master: SPI1_CS3
+      - component: ad9106_2
+        interface: spi
+        cs_pin_on_master: SPI1_CS4
+      - component: ad9106_3
+        interface: spi
+        cs_pin_on_master: SPI1_CS5
+      - component: ad8402_v23
+        interface: spi
+        cs_pin_on_master: SPI1_CS6
+      - component: ad8402_v24
+        interface: spi
+        cs_pin_on_master: SPI1_CS7
+      - component: valve_driver
+        interface: spi
+        cs_pin_on_master: SPI1_CS8
+
+  # ── UART: debug terminal ─────────────────────────────────────────────────────
+  - id: uart_stdout_bus
+    protocol: uart
+    peers:
+      - { component: mcu,         interface: uart_stdout }
+      - { component: term_stdout, interface: uart }
+
+nets:
+  # PWM pump outputs from FPGA to pump actuators
+  - id: net_pwm_pump0
+    endpoints:
+      - { component: mcu, pin: PWM_PUMP0 }
+      - { component: pump_0, pin: PWM }
+  - id: net_pwm_pump1
+    endpoints:
+      - { component: mcu, pin: PWM_PUMP1 }
+      - { component: pump_1, pin: PWM }
+  - id: net_pwm_pump2
+    endpoints:
+      - { component: mcu, pin: PWM_PUMP2 }
+      - { component: pump_2, pin: PWM }
+  - id: net_pwm_pump3
+    endpoints:
+      - { component: mcu, pin: PWM_PUMP3 }
+      - { component: pump_3, pin: PWM }
+  # Pump enable signals from IO expander (P0_4..P0_7)
+  - id: net_pump_en0
+    endpoints:
+      - { component: io_expander, pin: P0_4 }
+      - { component: pump_0, pin: ENABLE }
+  - id: net_pump_en1
+    endpoints:
+      - { component: io_expander, pin: P0_5 }
+      - { component: pump_1, pin: ENABLE }
+  - id: net_pump_en2
+    endpoints:
+      - { component: io_expander, pin: P0_6 }
+      - { component: pump_2, pin: ENABLE }
+  - id: net_pump_en3
+    endpoints:
+      - { component: io_expander, pin: P0_7 }
+      - { component: pump_3, pin: ENABLE }
+  # SFP signals connected to IO expander (P1_0..P1_3)
+  - id: net_sfp_mod
+    endpoints:
+      - { component: sfp_module, pin: SFP_MOD }
+      - { component: io_expander, pin: P1_0 }
+  - id: net_rx_loss
+    endpoints:
+      - { component: sfp_module, pin: RX_LOSS }
+      - { component: io_expander, pin: P1_1 }
+  - id: net_tx_fault
+    endpoints:
+      - { component: sfp_module, pin: TX_FAULT }
+      - { component: io_expander, pin: P1_2 }
+  - id: net_tx_disable
+    endpoints:
+      - { component: io_expander, pin: P1_3 }
+      - { component: sfp_module, pin: TX_DISABLE }
+  # Heater PWM outputs from FPGA
+  - id: net_pwm_heater_ph0
+    endpoints:
+      - { component: mcu, pin: PWM_HEATER_PH0 }
+      - { component: heater_ph0, pin: PWM }
+  - id: net_pwm_heater_ph1
+    endpoints:
+      - { component: mcu, pin: PWM_HEATER_PH1 }
+      - { component: heater_ph1, pin: PWM }
+  - id: net_pwm_heater_ph2
+    endpoints:
+      - { component: mcu, pin: PWM_HEATER_PH2 }
+      - { component: heater_ph2, pin: PWM }
+  - id: net_pwm_heater_ph3
+    endpoints:
+      - { component: mcu, pin: PWM_HEATER_PH3 }
+      - { component: heater_ph3, pin: PWM }
+  - id: net_pwm_heater_sectank
+    endpoints:
+      - { component: mcu, pin: PWM_HEATER_SECTANK }
+      - { component: heater_sectank, pin: PWM }
+  - id: net_pwm_heater_dist
+    endpoints:
+      - { component: mcu, pin: PWM_HEATER_DIST }
+      - { component: heater_dist, pin: PWM }
