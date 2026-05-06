@@ -193,13 +193,6 @@ components:
   # ── SPI bus 1 — MC33879 valve driver (CS8) ─────────────────────────────────
   - id: valve_driver
     type: nxp/mc33879@0.1
-    config:
-      signal_names:
-        S1: Meniscus1-Valve
-        S2: Purge-Valve
-        S4: Block1-Valve
-        S5: Block2-Valve
-        S6: Meniscus2-Valve
     mqtt:
       publish:
         S1: actuators/valves/meniscus1

@@ -8,6 +8,8 @@
 
 use sim_core::{BusResponse, BusTransaction, IcBehavior, IcError, InitCtx, MqttValue, RunCtx};
 
+const SIGNAL_NAMES: [&str; 8] = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"];
+
 pub struct Mc33879 {
     output_mask: u8,
 }
@@ -40,8 +42,15 @@ impl IcBehavior for Mc33879 {
                 if mosi.len() >= 2 {
                     let new_outputs = mosi[1];
                     if new_outputs != self.output_mask {
+                        let changed = new_outputs ^ self.output_mask;
                         self.output_mask = new_outputs;
-                        ctx.mqtt_publish("outputs", MqttValue::Int(new_outputs as i64));
+                        for bit in 0..8u8 {
+                            if changed & (1 << bit) != 0 {
+                                let on = new_outputs & (1 << bit) != 0;
+                                let name = SIGNAL_NAMES[bit as usize];
+                                ctx.mqtt_publish(name, MqttValue::Bool(on));
+                            }
+                        }
                     }
                     // rx[1] = fault status (always 0x00 — no simulated faults)
                     resp[1] = 0x00;

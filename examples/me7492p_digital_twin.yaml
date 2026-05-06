@@ -85,10 +85,10 @@ components:
   - id: io_expander
     type: nxp/pca9539a@0.1
     config:
-      i2c.address: 0x76
-      # Fixed revision pins (P0_0..P0_3 = board HW revision 0b0001)
+      i2c.address: 0x75
+      # Fixed revision pins (P0_0..P0_3 = board HW revision 0b0000)
       fixed_inputs:
-        P0_0: HIGH
+        P0_0: LOW
         P0_1: LOW
         P0_2: LOW
         P0_3: LOW
@@ -135,13 +135,6 @@ components:
 
   - id: output_driver
     type: nxp/mc33879@0.1
-    config:
-      signal_names:
-        S1: Meniscus1-Valve
-        S2: Purge-Valve
-        S4: Block1-Valve
-        S5: Block2-Valve
-        S6: Meniscus2-Valve
     mqtt:
       publish:
         S1: actuators/valves/meniscus1
@@ -343,10 +336,11 @@ nets:
     endpoints:
       - { component: mcu, pin: PWM_PUMP3 }
       - { component: pump_3, pin: PWM }
-  # Pump enable signals from IO expander (P0_4..P0_7)
+  # Pump enable signals from IO expander
+  # Firmware maps: pump0=x96→P0_6, pump1=x97→P0_5, pump2=x98→P0_7, pump3=x99→P0_4
   - id: net_pump_en0
     endpoints:
-      - { component: io_expander, pin: P0_4 }
+      - { component: io_expander, pin: P0_6 }
       - { component: pump_0, pin: ENABLE }
   - id: net_pump_en1
     endpoints:
@@ -354,11 +348,11 @@ nets:
       - { component: pump_1, pin: ENABLE }
   - id: net_pump_en2
     endpoints:
-      - { component: io_expander, pin: P0_6 }
+      - { component: io_expander, pin: P0_7 }
       - { component: pump_2, pin: ENABLE }
   - id: net_pump_en3
     endpoints:
-      - { component: io_expander, pin: P0_7 }
+      - { component: io_expander, pin: P0_4 }
       - { component: pump_3, pin: ENABLE }
   # SFP signals connected to IO expander (P1_0..P1_3)
   - id: net_sfp_mod
