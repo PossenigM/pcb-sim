@@ -26,11 +26,37 @@ const CKT_TYPE2: u8 = 0x80;
 
 pub struct Kq5100 {
     level_raw: u16,
+    rx_buf: Vec<u8>,
 }
 
 impl Kq5100 {
     pub fn new() -> Self {
-        Self { level_raw: 0 }
+        Self { level_raw: 0, rx_buf: Vec::new() }
+    }
+
+    /// Determine how many bytes are needed for a complete master frame,
+    /// given at least 2 bytes (MC + CKT) are available.
+    fn frame_length(mc: u8, ckt: u8) -> usize {
+        let mseq_type = ckt & CKT_TYPE_MASK;
+        match mseq_type {
+            CKT_TYPE0 => {
+                if (mc & MC_READ_BIT) != 0 { 2 } else { 3 }
+            }
+            CKT_TYPE1 => 10,
+            _ => 3, // TYPE_2: MC + CKT + PDOut
+        }
+    }
+
+    /// Try to extract one complete IO-Link master frame from the receive buffer.
+    fn try_extract_frame(&mut self) -> Option<Vec<u8>> {
+        if self.rx_buf.len() < 2 {
+            return None;
+        }
+        let needed = Self::frame_length(self.rx_buf[0], self.rx_buf[1]);
+        if self.rx_buf.len() < needed {
+            return None;
+        }
+        Some(self.rx_buf.drain(..needed).collect())
     }
 
     fn process_data_word(&self) -> u16 {
@@ -125,34 +151,30 @@ impl IcBehavior for Kq5100 {
     ) -> Result<BusResponse, IcError> {
         match txn {
             BusTransaction::UartFrame { data } => {
-                // Parse the IO-Link master frame and respond accordingly
-                if data.len() < 2 {
-                    return Ok(BusResponse::None);
-                }
+                self.rx_buf.extend_from_slice(data);
 
-                let mc = data[0];
-                let ckt = data[1];
+                let Some(frame) = self.try_extract_frame() else {
+                    return Ok(BusResponse::None);
+                };
+
+                let mc = frame[0];
+                let ckt = frame[1];
                 let mseq_type = ckt & CKT_TYPE_MASK;
                 let is_read = (mc & MC_READ_BIT) != 0;
 
                 let response = match mseq_type {
                     CKT_TYPE0 => {
-                        // TYPE_0: page channel (startup)
                         if is_read {
-                            // Default read response: return 0x00 for all page reads
                             self.build_type0_read_response(mc, ckt, 0x00)
                         } else {
-                            // Write: OD byte is data[2] if present
-                            let od = data.get(2).copied().unwrap_or(0);
+                            let od = frame.get(2).copied().unwrap_or(0);
                             self.build_type0_write_response(mc, ckt, od)
                         }
                     }
                     CKT_TYPE1 => {
-                        // TYPE_1: preoperate ISDU (always respond with zeros)
                         self.build_type1_response(mc)
                     }
                     CKT_TYPE2 | _ => {
-                        // TYPE_2 or default: operate — return process data
                         self.build_type2_response(mc)
                     }
                 };

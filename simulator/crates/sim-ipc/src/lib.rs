@@ -96,8 +96,13 @@ impl RequestKind {
 
 /// Commands sent from the read task to the write loop.
 enum WriteCmd {
-    /// Record this request_id so we know how to shape the response.
-    Track(u32, RequestKind),
+    /// Record this request_id, then dispatch it to the simulator event loop.
+    Dispatch {
+        request_id: u32,
+        kind: RequestKind,
+        sim_time: SimTime,
+        operation: IpcOperation,
+    },
     /// Send an error back immediately (e.g. unknown pin/bus name).
     SendNow(ServerMessage),
 }
@@ -531,7 +536,7 @@ impl IpcAdapter {
                             continue;
                         }
                     };
-                    debug!(component = %adapter2.name, message = ?msg, "socket rx");
+                    info!(component = %adapter2.name, message = ?msg, "socket rx");
 
                     let req_id = req_counter;
                     req_counter = req_counter.wrapping_add(1);
@@ -539,14 +544,16 @@ impl IpcAdapter {
 
                     match translate_client(msg, &adapter2.pin_map, &adapter2.bus_map) {
                         Ok((op, kind)) => {
-                            // Track before dispatching so the write loop sees the kind
-                            // before any response can arrive.
                             if let Some(k) = kind {
-                                if write_tx.send(WriteCmd::Track(req_id, k)).await.is_err() {
+                                if write_tx.send(WriteCmd::Dispatch {
+                                    request_id: req_id,
+                                    kind: k,
+                                    sim_time,
+                                    operation: op,
+                                }).await.is_err() {
                                     break; // write loop exited
                                 }
-                            }
-                            if !sender.send(ExternalEvent::IpcRequest {
+                            } else if !sender.send(ExternalEvent::IpcRequest {
                                 request_id: req_id,
                                 firmware_host: adapter2.component,
                                 sim_time,
@@ -568,11 +575,21 @@ impl IpcAdapter {
             let mut pending: HashMap<u32, RequestKind> = HashMap::new();
             'session: loop {
                 tokio::select! {
-                    biased; // check write_rx first to guarantee Track arrives before response
+                    biased;
 
                     cmd = write_rx.recv() => {
                         match cmd {
-                            Some(WriteCmd::Track(id, kind)) => { pending.insert(id, kind); }
+                            Some(WriteCmd::Dispatch { request_id, kind, sim_time, operation }) => {
+                                pending.insert(request_id, kind);
+                                if !event_sender.send(ExternalEvent::IpcRequest {
+                                    request_id,
+                                    firmware_host: adapter.component,
+                                    sim_time,
+                                    operation,
+                                }).await {
+                                    return Ok(()); // event loop gone
+                                }
+                            }
                             Some(WriteCmd::SendNow(msg)) => {
                                 if write_msg(&mut write_half, &msg).await.is_err() {
                                     break 'session;
@@ -591,7 +608,7 @@ impl IpcAdapter {
                                     &adapter.pin_names,
                                     &adapter.bus_names,
                                 ) {
-                                    debug!(component = %adapter.name, message = ?msg, "socket tx");
+                                    info!(component = %adapter.name, message = ?msg, "socket tx");
                                     if write_msg(&mut write_half, &msg).await.is_err() {
                                         break 'session;
                                     }

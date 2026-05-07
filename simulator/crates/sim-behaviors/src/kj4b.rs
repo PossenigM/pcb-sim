@@ -32,6 +32,8 @@ pub struct Kj4b {
     temperature_centi: i16,
     /// Heater target raw value (as set by firmware)
     heater_target_raw: u16,
+    /// Receive buffer: accumulates UART bytes until a complete packet arrives.
+    rx_buf: Vec<u8>,
 }
 
 impl Kj4b {
@@ -39,7 +41,35 @@ impl Kj4b {
         Self {
             temperature_centi: 2500, // 25.00°C default
             heater_target_raw: 0,
+            rx_buf: Vec::new(),
         }
+    }
+
+    /// Try to extract one complete Kyocera packet from the receive buffer.
+    /// Returns the packet bytes (including preamble) if complete, or None.
+    fn try_extract_packet(&mut self) -> Option<Vec<u8>> {
+        // Find preamble (3× 0xFE). Discard any leading junk.
+        loop {
+            if self.rx_buf.len() < 4 {
+                return None;
+            }
+            if self.rx_buf[0] == PREAMBLE
+                && self.rx_buf[1] == PREAMBLE
+                && self.rx_buf[2] == PREAMBLE
+            {
+                break;
+            }
+            self.rx_buf.remove(0);
+        }
+
+        let n = self.rx_buf[3] as usize;
+        let total_len = 4 + n; // preamble(3) + N(1) + N bytes (CMD + payload + checksum)
+        if self.rx_buf.len() < total_len {
+            return None;
+        }
+
+        let packet: Vec<u8> = self.rx_buf.drain(..total_len).collect();
+        Some(packet)
     }
 
     /// Convert temperature in centi-celsius to raw NTC ADC value.
@@ -167,34 +197,19 @@ impl IcBehavior for Kj4b {
     ) -> Result<BusResponse, IcError> {
         match txn {
             BusTransaction::UartFrame { data } => {
-                // Parse the Kyocera packet from the received UART bytes.
-                // Expected format: [0xFE 0xFE 0xFE] [N] [CMD] [PAYLOAD...] [CHECKSUM]
-                if data.len() < OVERHEAD {
+                self.rx_buf.extend_from_slice(data);
+
+                let Some(packet) = self.try_extract_packet() else {
                     return Ok(BusResponse::None);
-                }
+                };
 
-                // Verify preamble
-                for i in 0..PREAMBLE_COUNT {
-                    if data[i] != PREAMBLE {
-                        return Ok(BusResponse::None);
-                    }
-                }
-
-                let n = data[PREAMBLE_COUNT] as usize;
-                let cmd = data[PREAMBLE_COUNT + 1];
-
-                // Extract payload (between CMD and CHECKSUM)
+                let n = packet[PREAMBLE_COUNT] as usize;
+                let cmd = packet[PREAMBLE_COUNT + 1];
                 let payload_len = if n >= 2 { n - 2 } else { 0 };
                 let payload_start = PREAMBLE_COUNT + 2;
                 let payload_end = payload_start + payload_len;
+                let tx_payload = &packet[payload_start..payload_end];
 
-                if data.len() < payload_end + 1 {
-                    return Ok(BusResponse::None);
-                }
-
-                let tx_payload = &data[payload_start..payload_end];
-
-                // Handle the command and build response
                 let resp_payload = self.handle_command(cmd, tx_payload, ctx);
                 let response = Self::build_response(cmd, &resp_payload);
 
