@@ -182,13 +182,16 @@ async fn main() -> Result<()> {
                         Some(InterfaceRole::Master) => master = Some(cid),
                         _ => {
                             let comp = comp_by_id[member.component.as_str()];
-                            if let Some(addr) = resolve_i2c_address(comp, iface) {
-                                slaves.insert(addr as u8, cid);
-                            } else {
+                            let addrs = resolve_i2c_addresses(comp, iface);
+                            if addrs.is_empty() {
                                 tracing::warn!(
                                     component = %member.component,
                                     "I2C slave has no resolvable address; skipping"
                                 );
+                            } else {
+                                for addr in addrs {
+                                    slaves.insert(addr as u8, cid);
+                                }
                             }
                         }
                     }
@@ -444,18 +447,38 @@ fn yaml_to_config_value(v: &serde_yaml::Value) -> Option<ConfigValue> {
     }
 }
 
-/// Resolve an I2C slave address from board config and/or manifest default.
-/// Board config key `{interface_name}.address` takes priority over manifest default.
-fn resolve_i2c_address(comp: &Component, iface: &Interface) -> Option<i64> {
-    let config_key = format!("{}.address", iface.name);
+/// Resolve one or more I2C slave addresses for a component interface.
+/// Checks (in order):
+///   1. `{iface}.addresses` in board config (sequence of hex/decimal values)
+///   2. `{iface}.address`  in board config (single value)
+///   3. manifest interface config `address.default` (single value)
+fn resolve_i2c_addresses(comp: &Component, iface: &Interface) -> Vec<i64> {
+    let plural_key   = format!("{}.addresses", iface.name);
+    let singular_key = format!("{}.address",   iface.name);
 
-    if let Some(v) = comp.config.get(&config_key) {
-        return yaml_as_i64(v);
+    if let Some(v) = comp.config.get(&plural_key) {
+        if let serde_yaml::Value::Sequence(seq) = v {
+            let addrs: Vec<i64> = seq.iter().filter_map(yaml_as_i64).collect();
+            if !addrs.is_empty() {
+                return addrs;
+            }
+        }
     }
 
-    iface.config.get("address")
+    if let Some(v) = comp.config.get(&singular_key) {
+        if let Some(a) = yaml_as_i64(v) {
+            return vec![a];
+        }
+    }
+
+    if let Some(a) = iface.config.get("address")
         .and_then(|cf| cf.default.as_ref())
         .and_then(yaml_as_i64)
+    {
+        return vec![a];
+    }
+
+    vec![]
 }
 
 fn yaml_as_i64(v: &serde_yaml::Value) -> Option<i64> {
