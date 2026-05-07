@@ -195,11 +195,11 @@ components:
     type: nxp/mc33879@0.1
     mqtt:
       publish:
-        S1: actuators/valves/meniscus1
-        S2: actuators/valves/purge
-        S4: actuators/valves/block1
-        S5: actuators/valves/block2
-        S6: actuators/valves/meniscus2
+        s1: actuators/valves/meniscus1
+        s2: actuators/valves/purge
+        s4: actuators/valves/block1
+        s5: actuators/valves/block2
+        s6: actuators/valves/meniscus2
 
   # ── UART: debug terminal ─────────────────────────────────────────────────────
   - id: term_stdout

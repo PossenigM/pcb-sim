@@ -8,7 +8,7 @@
 
 use sim_core::{BusResponse, BusTransaction, IcBehavior, IcError, InitCtx, MqttValue, RunCtx};
 
-const SIGNAL_NAMES: [&str; 8] = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"];
+const SIGNAL_NAMES: [&str; 8] = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"];
 
 pub struct Mc33879 {
     output_mask: u8,

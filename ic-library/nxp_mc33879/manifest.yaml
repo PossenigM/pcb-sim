@@ -32,13 +32,13 @@ pins:
 
 mqtt:
   publish:
-    - { name: S1, type: bool }
-    - { name: S2, type: bool }
-    - { name: S3, type: bool }
-    - { name: S4, type: bool }
-    - { name: S5, type: bool }
-    - { name: S6, type: bool }
-    - { name: S7, type: bool }
-    - { name: S8, type: bool }
+    - { name: s1, type: bool }
+    - { name: s2, type: bool }
+    - { name: s3, type: bool }
+    - { name: s4, type: bool }
+    - { name: s5, type: bool }
+    - { name: s6, type: bool }
+    - { name: s7, type: bool }
+    - { name: s8, type: bool }
 
 behavior: builtin:mc33879
