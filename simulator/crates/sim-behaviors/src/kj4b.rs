@@ -170,6 +170,15 @@ impl Kj4b {
             }
             // WriteUserMemoryArea (0x8B): firmware expects 2 bytes
             0x8b => vec![0x80u8, 0x00u8],
+            // ReadFactoryDefaultVoltage (0x1C, EX600): firmware expects 31 bytes
+            // Firmware reads VoltageSetting from rx_payload[1] and rx_payload[2]
+            0x1c => {
+                let mut resp = vec![0x80u8]; // RES1
+                resp.extend_from_slice(&[0u8; 30]);
+                resp
+            }
+            // ReadVoltageSetting (0x15, EX600): firmware expects 3 bytes [RES1, decimal, integer]
+            0x15 => vec![0x80u8, 0x00u8, 0x00u8],
             // All other commands: return success with 2-byte response (RES1 + reserved)
             _ => {
                 vec![0x80u8, 0x00u8]
