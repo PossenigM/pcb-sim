@@ -64,11 +64,25 @@ impl Kq5100 {
         ((self.level_raw & 0x0FFF) << 4) | switch_state
     }
 
-    /// Compute IO-Link checksum6 from XOR-8 accumulator.
-    fn checksum6(xor8: u8) -> u8 {
-        // IO-Link spec: ck6 = bits[5..0] of xor-folded accumulator
-        let folded = (xor8 ^ (xor8 >> 6)) & 0x3F;
-        folded
+    /// Compute IO-Link checksum6 from XOR-8 accumulator (spec A.1 compression).
+    fn checksum6(d: u8) -> u8 {
+        let d0 = (d >> 0) & 1;
+        let d1 = (d >> 1) & 1;
+        let d2 = (d >> 2) & 1;
+        let d3 = (d >> 3) & 1;
+        let d4 = (d >> 4) & 1;
+        let d5 = (d >> 5) & 1;
+        let d6 = (d >> 6) & 1;
+        let d7 = (d >> 7) & 1;
+
+        let o5 = d7 ^ d5 ^ d3 ^ d1;
+        let o4 = d6 ^ d4 ^ d2 ^ d0;
+        let o3 = d7 ^ d6;
+        let o2 = d5 ^ d4;
+        let o1 = d3 ^ d2;
+        let o0 = d1 ^ d0;
+
+        (o5 << 5) | (o4 << 4) | (o3 << 3) | (o2 << 2) | (o1 << 1) | o0
     }
 
     /// Build a TYPE_0 page-read response: [OD, CKS]
