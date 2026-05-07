@@ -122,6 +122,10 @@ impl IcBehavior for UartTerminal {
 }
 
 /// Create a PTY pair. Returns `(master_fd, slave_fd)` with `O_NONBLOCK` on master.
+///
+/// The slave is configured in raw mode so that bytes written to the master
+/// (firmware TX) are not echoed back into the master read buffer (which would
+/// be delivered to the firmware as spurious RX data).
 fn open_pty() -> Result<(RawFd, RawFd), String> {
     let mut master: RawFd = -1;
     let mut slave: RawFd = -1;
@@ -149,6 +153,15 @@ fn open_pty() -> Result<(RawFd, RawFd), String> {
     if ret < 0 {
         unsafe { libc::close(master); libc::close(slave) };
         return Err(std::io::Error::last_os_error().to_string());
+    }
+
+    // Disable echo and all other line-discipline processing on the slave so
+    // that bytes written to the master (firmware TX) are not echoed back into
+    // the master read buffer and mistakenly fed to the firmware as RX data.
+    let mut tios: libc::termios = unsafe { std::mem::zeroed() };
+    if unsafe { libc::tcgetattr(slave, &mut tios) } == 0 {
+        unsafe { libc::cfmakeraw(&mut tios) };
+        unsafe { libc::tcsetattr(slave, libc::TCSANOW, &tios) };
     }
 
     Ok((master, slave))
