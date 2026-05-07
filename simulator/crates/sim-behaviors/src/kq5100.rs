@@ -23,27 +23,45 @@ const CKT_TYPE_MASK: u8 = 0xC0;
 const CKT_TYPE0: u8 = 0x00;
 const CKT_TYPE1: u8 = 0x40;
 const CKT_TYPE2: u8 = 0x80;
+const CKS_STATUS_OK: u8 = 0x00;
+const KQ5100_PRODUCT_NAME: &[u8] = b"KQ5100";
+const ISDU_CONTROL_ADDR: u8 = 16;
+const ISDU_INDEX_LSB_ADDR: u8 = 1;
+const ISDU_SERVICE_QUAL_ADDR: u8 = 2;
+const PRODUCT_NAME_INDEX: u16 = 18;
 
 pub struct Kq5100 {
     level_raw: u16,
     rx_buf: Vec<u8>,
+    isdu_index_lsb: u8,
+    isdu_index: u16,
 }
 
 impl Kq5100 {
     pub fn new() -> Self {
-        Self { level_raw: 0, rx_buf: Vec::new() }
+        Self {
+            level_raw: 0,
+            rx_buf: Vec::new(),
+            isdu_index_lsb: 0,
+            isdu_index: 0,
+        }
     }
 
     /// Determine how many bytes are needed for a complete master frame,
     /// given at least 2 bytes (MC + CKT) are available.
     fn frame_length(mc: u8, ckt: u8) -> usize {
         let mseq_type = ckt & CKT_TYPE_MASK;
+        let is_read = (mc & MC_READ_BIT) != 0;
         match mseq_type {
             CKT_TYPE0 => {
-                if (mc & MC_READ_BIT) != 0 { 2 } else { 3 }
+                if is_read { 2 } else { 3 }
             }
-            CKT_TYPE1 => 10,
-            _ => 3, // TYPE_2: MC + CKT + PDOut
+            CKT_TYPE1 => {
+                if is_read { 2 } else { 10 }
+            }
+            _ => {
+                if is_read { 2 } else { 3 }
+            }
         }
     }
 
@@ -85,51 +103,94 @@ impl Kq5100 {
         (o5 << 5) | (o4 << 4) | (o3 << 3) | (o2 << 2) | (o1 << 1) | o0
     }
 
+    fn response_cks(payload: &[u8], status_bits: u8) -> u8 {
+        let status_bits = status_bits & CKT_TYPE_MASK;
+        let mut x = PREAMBLE_SEED ^ status_bits;
+        for &b in payload {
+            x ^= b;
+        }
+        status_bits | Self::checksum6(x)
+    }
+
+    fn page_data(address: u8) -> u8 {
+        match address {
+            // Values read by firmware during startup validation.
+            7 => 0x03,
+            8 => 0x10,
+            9 => 0x00,
+            10 => 0x03,
+            11 => 0x71,
+            _ => 0x00,
+        }
+    }
+
+    fn record_type2_write(&mut self, mc: u8, pdout: u8) {
+        match mc & 0x1F {
+            ISDU_INDEX_LSB_ADDR => {
+                self.isdu_index_lsb = pdout;
+            }
+            ISDU_SERVICE_QUAL_ADDR => {
+                let index_msb = ((pdout & 0x7E) >> 1) as u16;
+                self.isdu_index = (index_msb << 8) | self.isdu_index_lsb as u16;
+            }
+            _ => {}
+        }
+    }
+
+    fn isdu_read_data(&self, address: u8) -> u8 {
+        if self.isdu_index == PRODUCT_NAME_INDEX && address >= ISDU_INDEX_LSB_ADDR {
+            let offset = (address - ISDU_INDEX_LSB_ADDR) as usize;
+            return KQ5100_PRODUCT_NAME.get(offset).copied().unwrap_or(0);
+        }
+        0
+    }
+
     /// Build a TYPE_0 page-read response: [OD, CKS]
-    fn build_type0_read_response(&self, mc: u8, _ckt: u8, od: u8) -> Vec<u8> {
-        // CKS: type=0 in bits 7..6, checksum6 in bits 5..0
-        // PD valid (bit 6 of CKS = 0), no event (bit 7 = 0)
-        let mut x = PREAMBLE_SEED;
-        x ^= mc;
-        x ^= od;
-        let ck6 = Self::checksum6(x);
-        vec![od, ck6]
+    fn build_type0_read_response(&self, od: u8) -> Vec<u8> {
+        vec![od, Self::response_cks(&[od], CKS_STATUS_OK)]
     }
 
     /// Build a TYPE_0 page-write response: [CKS]
-    fn build_type0_write_response(&self, mc: u8, _ckt: u8, _od: u8) -> Vec<u8> {
-        // Response is just CKS byte (pd_valid=1, no event)
-        let x = PREAMBLE_SEED ^ mc;
-        let ck6 = Self::checksum6(x);
-        vec![ck6]
+    fn build_type0_write_response(&self) -> Vec<u8> {
+        vec![Self::response_cks(&[], CKS_STATUS_OK)]
     }
 
     /// Build a TYPE_1 read response: [OD×8, CKS]
-    fn build_type1_response(&self, mc: u8) -> Vec<u8> {
-        // Return 8 zero OD bytes + CKS
+    fn build_type1_read_response(&self) -> Vec<u8> {
         let od = [0u8; 8];
-        let mut x = PREAMBLE_SEED;
-        x ^= mc;
-        for &b in &od {
-            x ^= b;
-        }
-        let ck6 = Self::checksum6(x);
         let mut resp = od.to_vec();
-        resp.push(ck6);
+        resp.push(Self::response_cks(&od, CKS_STATUS_OK));
         resp
     }
 
-    /// Build a TYPE_2 operate response with process data: [PD_hi, PD_lo, CKS]
-    fn build_type2_response(&self, mc: u8) -> Vec<u8> {
+    /// Build a TYPE_1 write acknowledgement: [CKS]
+    fn build_type1_write_response(&self) -> Vec<u8> {
+        vec![Self::response_cks(&[], CKS_STATUS_OK)]
+    }
+
+    /// Build a TYPE_2 read response: [PDI, OD0, OD1, CKS]
+    fn build_type2_read_response(&self, address: u8) -> Vec<u8> {
+        let pdi = if address == ISDU_CONTROL_ADDR {
+            0
+        } else {
+            self.isdu_read_data(address)
+        };
+        let payload = [pdi, 0u8, 0u8];
+        vec![
+            payload[0],
+            payload[1],
+            payload[2],
+            Self::response_cks(&payload, CKS_STATUS_OK),
+        ]
+    }
+
+    /// Build a TYPE_2 write/cyclic response with process data: [PD_hi, PD_lo, CKS]
+    fn build_type2_write_response(&self) -> Vec<u8> {
         let pd = self.process_data_word();
         let pd_hi = (pd >> 8) as u8;
         let pd_lo = (pd & 0xFF) as u8;
-        let mut x = PREAMBLE_SEED;
-        x ^= mc;
-        x ^= pd_hi;
-        x ^= pd_lo;
-        let ck6 = Self::checksum6(x);
-        vec![pd_hi, pd_lo, ck6]
+        let payload = [pd_hi, pd_lo];
+        vec![pd_hi, pd_lo, Self::response_cks(&payload, CKS_STATUS_OK)]
     }
 }
 
@@ -179,17 +240,27 @@ impl IcBehavior for Kq5100 {
                 let response = match mseq_type {
                     CKT_TYPE0 => {
                         if is_read {
-                            self.build_type0_read_response(mc, ckt, 0x00)
+                            self.build_type0_read_response(Self::page_data(mc & 0x1F))
                         } else {
-                            let od = frame.get(2).copied().unwrap_or(0);
-                            self.build_type0_write_response(mc, ckt, od)
+                            self.build_type0_write_response()
                         }
                     }
                     CKT_TYPE1 => {
-                        self.build_type1_response(mc)
+                        if is_read {
+                            self.build_type1_read_response()
+                        } else {
+                            self.build_type1_write_response()
+                        }
                     }
                     CKT_TYPE2 | _ => {
-                        self.build_type2_response(mc)
+                        if is_read {
+                            self.build_type2_read_response(mc & 0x1F)
+                        } else {
+                            if let Some(pdout) = frame.get(2).copied() {
+                                self.record_type2_write(mc, pdout);
+                            }
+                            self.build_type2_write_response()
+                        }
                     }
                 };
 
@@ -197,5 +268,95 @@ impl IcBehavior for Kq5100 {
             }
             _ => Err(IcError::Unsupported("kq5100: expected UART IO-Link frame")),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn firmware_accepts(payload: &[u8], cks: u8) -> bool {
+        let mut x = PREAMBLE_SEED ^ (cks & CKT_TYPE_MASK);
+        for &b in payload {
+            x ^= b;
+        }
+        Kq5100::checksum6(x) == (cks & 0x3F)
+    }
+
+    #[test]
+    fn type0_read_checksum_matches_firmware_verifier() {
+        let sensor = Kq5100::new();
+        let resp = sensor.build_type0_read_response(0x36);
+        assert_eq!(resp.len(), 2);
+        assert!(firmware_accepts(&resp[..1], resp[1]));
+    }
+
+    #[test]
+    fn type0_write_ack_checksum_matches_firmware_verifier() {
+        let sensor = Kq5100::new();
+        let resp = sensor.build_type0_write_response();
+        assert_eq!(resp.len(), 1);
+        assert!(firmware_accepts(&[], resp[0]));
+    }
+
+    #[test]
+    fn frame_length_distinguishes_reads_and_writes() {
+        assert_eq!(Kq5100::frame_length(0x80, CKT_TYPE0), 2);
+        assert_eq!(Kq5100::frame_length(0x00, CKT_TYPE0), 3);
+        assert_eq!(Kq5100::frame_length(0x80, CKT_TYPE1), 2);
+        assert_eq!(Kq5100::frame_length(0x00, CKT_TYPE1), 10);
+        assert_eq!(Kq5100::frame_length(0x80, CKT_TYPE2), 2);
+        assert_eq!(Kq5100::frame_length(0x00, CKT_TYPE2), 3);
+    }
+
+    #[test]
+    fn response_lengths_match_firmware_reads() {
+        let sensor = Kq5100::new();
+
+        let type1_read = sensor.build_type1_read_response();
+        assert_eq!(type1_read.len(), 9);
+        assert!(firmware_accepts(&type1_read[..8], type1_read[8]));
+
+        let type1_write = sensor.build_type1_write_response();
+        assert_eq!(type1_write.len(), 1);
+        assert!(firmware_accepts(&[], type1_write[0]));
+
+        let type2_read = sensor.build_type2_read_response(ISDU_CONTROL_ADDR);
+        assert_eq!(type2_read.len(), 4);
+        assert!(firmware_accepts(&type2_read[..3], type2_read[3]));
+
+        let type2_write = sensor.build_type2_write_response();
+        assert_eq!(type2_write.len(), 3);
+        assert!(firmware_accepts(&type2_write[..2], type2_write[2]));
+    }
+
+    #[test]
+    fn page_data_exposes_expected_ids() {
+        assert_eq!(Kq5100::page_data(7), 0x03);
+        assert_eq!(Kq5100::page_data(8), 0x10);
+        assert_eq!(Kq5100::page_data(9), 0x00);
+        assert_eq!(Kq5100::page_data(10), 0x03);
+        assert_eq!(Kq5100::page_data(11), 0x71);
+    }
+
+    #[test]
+    fn type2_isdu_read_exposes_product_name() {
+        let mut sensor = Kq5100::new();
+
+        sensor.record_type2_write(ISDU_INDEX_LSB_ADDR, PRODUCT_NAME_INDEX as u8);
+        sensor.record_type2_write(ISDU_SERVICE_QUAL_ADDR, 0x81);
+
+        for (offset, expected) in KQ5100_PRODUCT_NAME.iter().enumerate() {
+            let address = ISDU_INDEX_LSB_ADDR + offset as u8;
+            let resp = sensor.build_type2_read_response(address);
+            assert_eq!(resp[0], *expected);
+            assert!(firmware_accepts(&resp[..3], resp[3]));
+        }
+
+        let terminator = sensor.build_type2_read_response(
+            ISDU_INDEX_LSB_ADDR + KQ5100_PRODUCT_NAME.len() as u8,
+        );
+        assert_eq!(terminator[0], 0);
+        assert!(firmware_accepts(&terminator[..3], terminator[3]));
     }
 }
