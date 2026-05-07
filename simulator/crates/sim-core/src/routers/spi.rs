@@ -28,9 +28,14 @@ impl SpiRouter {
         Self { bus_id, master, slaves_by_cs }
     }
 
-    /// Look up the slave selected by the given CS pin name.
+    /// Look up the slave selected by the given CS pin name (case-insensitive).
     /// Returns `None` if no slave is registered for that CS pin.
     pub fn route_cs(&self, cs_pin_name: &str) -> Option<ComponentId> {
-        self.slaves_by_cs.get(cs_pin_name).copied()
+        self.slaves_by_cs.get(cs_pin_name).copied().or_else(|| {
+            let lower = cs_pin_name.to_ascii_lowercase();
+            self.slaves_by_cs.iter()
+                .find(|(k, _)| k.to_ascii_lowercase() == lower)
+                .map(|(_, &v)| v)
+        })
     }
 }

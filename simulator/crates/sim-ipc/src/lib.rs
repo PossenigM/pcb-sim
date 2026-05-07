@@ -272,10 +272,10 @@ fn translate_client(
             Some(RequestKind::I2cWriteRead { wire_id: id }),
         ),
 
-        // The `cs` field identifies which slave is selected; the event loop
-        // tracks CS pin assertion state via GpioWrite, so we ignore `cs` here.
-        ClientMessage::SpiTransfer { id, bus, mosi, .. } => (
-            IpcOperation::SpiTransfer { bus: bus!(bus, id), mosi: mosi.into_vec() },
+        // The `cs` field identifies which slave is selected. Pass it through
+        // so the event loop can use it when no GPIO-based CS is active.
+        ClientMessage::SpiTransfer { id, bus, cs, mosi, .. } => (
+            IpcOperation::SpiTransfer { bus: bus!(bus, id), cs: Some(cs), mosi: mosi.into_vec() },
             Some(RequestKind::SpiTransfer { wire_id: id }),
         ),
 

@@ -74,7 +74,7 @@ pub enum IpcOperation {
     I2cWrite    { bus: BusId, address: u8, data: Vec<u8> },
     I2cRead     { bus: BusId, address: u8, length: usize },
     I2cWriteRead { bus: BusId, address: u8, write: Vec<u8>, read_length: usize },
-    SpiTransfer { bus: BusId, mosi: Vec<u8> },
+    SpiTransfer { bus: BusId, cs: Option<String>, mosi: Vec<u8> },
     GpioWrite   { pin: PinId, value: PinValue },
     GpioRead    { pin: PinId },
     GpioConfigure { pin: PinId, direction: GpioDirection, pull: GpioPull },
@@ -394,11 +394,14 @@ impl EventLoop {
                 let _ = self.ipc_tx.try_send(msg);
             }
 
-            IpcOperation::SpiTransfer { bus, mosi } => {
-                // Look up which slave is selected via the currently-active CS pin.
-                let slave_id = self.spi_active_cs.get(&bus).cloned().and_then(|cs| {
-                    self.spi_routers.get(&bus).and_then(|r| r.route_cs(&cs))
-                });
+            IpcOperation::SpiTransfer { bus, cs, mosi } => {
+                // Look up which slave is selected: prefer GPIO-asserted CS, fall
+                // back to the `cs` field sent inline with the transfer message.
+                let slave_id = self.spi_active_cs.get(&bus).cloned()
+                    .or(cs)
+                    .and_then(|cs_name| {
+                        self.spi_routers.get(&bus).and_then(|r| r.route_cs(&cs_name))
+                    });
 
                 let msg = match slave_id {
                     None => {
