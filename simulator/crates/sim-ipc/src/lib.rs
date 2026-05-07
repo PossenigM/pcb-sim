@@ -531,6 +531,7 @@ impl IpcAdapter {
                             continue;
                         }
                     };
+                    debug!(component = %adapter2.name, message = ?msg, "socket rx");
 
                     let req_id = req_counter;
                     req_counter = req_counter.wrapping_add(1);
@@ -590,6 +591,7 @@ impl IpcAdapter {
                                     &adapter.pin_names,
                                     &adapter.bus_names,
                                 ) {
+                                    debug!(component = %adapter.name, message = ?msg, "socket tx");
                                     if write_msg(&mut write_half, &msg).await.is_err() {
                                         break 'session;
                                     }
