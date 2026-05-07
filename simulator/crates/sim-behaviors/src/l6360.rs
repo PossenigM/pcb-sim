@@ -25,8 +25,8 @@ pub struct L6360 {
 impl L6360 {
     pub fn new() -> Self {
         let mut regs = [0u8; NUM_REGS];
-        // STATUS bit 4 = L+ power OK — report "power good" at startup.
-        regs[0] = 0x10;
+        // STATUS bit 7 = L+ power on (no faults).
+        regs[0] = 0x80;
         Self { regs }
     }
 
@@ -59,9 +59,13 @@ impl IcBehavior for L6360 {
         match txn {
             // Plain read: firmware reads STATUS + PARITY (2 bytes).
             BusTransaction::I2cRead { length, .. } => {
-                self.regs[8] = Self::compute_parity(&self.regs);
-                let n = length.min(2);
-                Ok(BusResponse::Data(self.regs[..n].to_vec()))
+                let parity = Self::compute_parity(&self.regs);
+                let resp: &[u8] = match length {
+                    0 => &[],
+                    1 => std::slice::from_ref(&self.regs[0]),
+                    _ => &[self.regs[0], parity],
+                };
+                Ok(BusResponse::Data(resp.to_vec()))
             }
 
             // Block write starting at a register address (first data byte = reg).

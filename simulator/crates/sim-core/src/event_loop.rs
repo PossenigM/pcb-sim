@@ -547,12 +547,30 @@ impl EventLoop {
                     });
                 } else {
                     let mut outputs = PendingOutputs::default();
+                    let mut reply_data: Option<Vec<u8>> = None;
                     if let Some(beh) = self.behaviors.get_mut(&dest) {
                         let txn = OwnedBusTransaction::UartFrame { data: buffered };
                         let mut ctx = RunCtx::new(self.now, &mut outputs);
-                        let _ = beh.on_bus_transaction(txn.as_transaction(), &mut ctx);
+                        if let Ok(BusResponse::Data(d)) =
+                            beh.on_bus_transaction(txn.as_transaction(), &mut ctx)
+                        {
+                            reply_data = Some(d);
+                        }
                     }
                     self.process_outputs(dest, outputs);
+                    if let Some(reply) = reply_data {
+                        if let Some(router) = self.uart_routers.get_mut(&bus) {
+                            router.forward(dest, &reply);
+                            let back = router.drain_for_peer(from);
+                            if self.firmware_hosts.contains(&from) {
+                                let _ = self.ipc_tx.try_send(IpcResponse::UartRx {
+                                    bus,
+                                    data: back,
+                                    sim_time: self.now,
+                                });
+                            }
+                        }
+                    }
                 }
                 (dest, overflow)
             }
