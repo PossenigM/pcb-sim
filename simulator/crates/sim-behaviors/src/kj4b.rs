@@ -134,32 +134,45 @@ impl Kj4b {
                 resp
             }
             // ReadHeaterTemp (0x12): return temperature as raw NTC value
+            // Firmware reads: 0x3FF & (rx_payload[3] << 8 | rx_payload[2])
+            // so low byte at index 2, high byte at index 3
             0x12 => {
                 let raw = Self::temp_centi_to_raw(self.temperature_centi);
-                // Response: RES1 + 7 bytes (raw value in bytes [1..2], rest zero)
-                let mut resp = vec![0x80u8]; // RES1 valid
-                resp.push((raw >> 8) as u8);
-                resp.push((raw & 0xFF) as u8);
-                resp.extend_from_slice(&[0u8; 5]);
+                let mut resp = vec![0x80u8, 0x00u8]; // RES1, reserved
+                resp.push((raw & 0xFF) as u8); // index 2: low byte
+                resp.push((raw >> 8) as u8);   // index 3: high byte
+                resp.extend_from_slice(&[0u8; 4]);
                 resp
             }
             // WriteTempLimitsForHeaterSetting (0x87): set heater target
+            // Firmware tx: [limits & 0xFF, (limits >> 8) & 0x03] — low byte first
+            // Firmware rx: expects 2 bytes [RES1, reserved]
             0x87 => {
                 if _tx_payload.len() >= 2 {
                     self.heater_target_raw =
-                        ((_tx_payload[0] as u16) << 8) | (_tx_payload[1] as u16);
-                    // Convert raw back to centi and publish
+                        (_tx_payload[0] as u16) | ((_tx_payload[1] as u16) << 8);
                     let target_centi = Self::raw_to_temp_centi(self.heater_target_raw);
                     ctx.mqtt_publish(
                         "heater_target",
                         MqttValue::Float(target_centi as f64),
                     );
                 }
-                vec![0x80u8] // RES1 valid (no payload for write commands)
+                vec![0x80u8, 0x00u8] // RES1 + reserved (firmware expects 2 bytes)
             }
-            // All other commands: return success with appropriately sized payload
+            // WriteDrivingStopFunctionStatus (0x84): firmware expects 2 bytes
+            0x84 => vec![0x80u8, 0x00u8],
+            // ReadUserMemoryArea (0x0B): firmware expects cUserMemoryReadResponseBytes = 147
+            // Layout: [RES1][146 bytes of user memory data]
+            0x0b => {
+                let mut resp = vec![0x80u8]; // RES1
+                resp.extend_from_slice(&[0u8; 146]);
+                resp
+            }
+            // WriteUserMemoryArea (0x8B): firmware expects 2 bytes
+            0x8b => vec![0x80u8, 0x00u8],
+            // All other commands: return success with 2-byte response (RES1 + reserved)
             _ => {
-                vec![0x80u8] // RES1 valid, minimal response
+                vec![0x80u8, 0x00u8]
             }
         }
     }
